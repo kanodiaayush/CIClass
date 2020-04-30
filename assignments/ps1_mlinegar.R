@@ -16,6 +16,7 @@ dataset_name <- "welfare"
 outcome_family <- "binomial" # based on whether your outcome is binary or not; input to regression
 outcome_type <- "class"
 n_sims <- 20
+lambda <- c(0.0001, 0.001, 0.01, 0.1, 0.3, 0.5, 0.7, 1, 5, 10, 50, 100, 1000)
 
 library(here)
 # devtools::install_github("hrbrmstr/hrbrthemes")
@@ -364,10 +365,6 @@ mean(df$Y[!obs_to_remove])
 drop_from_treat <- base::sample(which(obs_to_remove & df$W == 1), round(prob_treatment * sum(obs_to_remove)))
 drop_from_control <- base::sample(which(!obs_to_remove & df$W == 0), round(prob_control * sum(!obs_to_remove)))
 
-# FIXME: don't do this way
-# drop_treat <- base::sample(which(obs_to_remove & df$W == 1), 15000)
-# drop_control <- base::sample(which(obs_to_remove & df$W == 0), 75000)
-
 df_mod <- df[-c(drop_from_treat, drop_from_control),]
 
 #' The difference in means is now biased, and significantly outside the confidence interval indicated by the RCT.  
@@ -421,13 +418,12 @@ pY_logistic.fit.int <- glm(Ymod ~ Xmod.int, family = outcome_family)
 pY_logistic.int <- predict(pY_logistic.fit.int, type = "response")
 
 # lasso expanded data, code provided by TA
-# FIXME: specify lambdas in glmnet::cv.glmnet
 # original data
-pW_glmnet.fit.propensity = glmnet::cv.glmnet(Xmod, Wmod, family = "binomial", type.measure = "class", keep=TRUE) 
-pY_glmnet.fit.propensity = glmnet::cv.glmnet(Xmod, Ymod, family = outcome_family, type.measure = outcome_type, keep=TRUE) 
+pW_glmnet.fit.propensity = glmnet::cv.glmnet(Xmod, Wmod, lambda = lambda, family = "binomial", type.measure = "class", keep=TRUE) 
+pY_glmnet.fit.propensity = glmnet::cv.glmnet(Xmod, Ymod, lambda = lambda, family = outcome_family, type.measure = outcome_type, keep=TRUE) 
 # expanded data
-pW_glmnet.fit.propensity.int = glmnet::cv.glmnet(Xmod.int, Wmod, family = "binomial", type.measure = "class", keep=TRUE) 
-pY_glmnet.fit.propensity.int = glmnet::cv.glmnet(Xmod.int, Ymod, family = outcome_family, type.measure = outcome_type, keep=TRUE) 
+pW_glmnet.fit.propensity.int = glmnet::cv.glmnet(Xmod.int, Wmod, lambda = lambda, family = "binomial", type.measure = "class", keep=TRUE) 
+pY_glmnet.fit.propensity.int = glmnet::cv.glmnet(Xmod.int, Ymod, lambda = lambda, family = outcome_family, type.measure = outcome_type, keep=TRUE) 
 
 # demonstration of lasso fit across lambdas:
 pW_lasso = pW_glmnet.fit.propensity$fit.preval[, pW_glmnet.fit.propensity$lambda == pW_glmnet.fit.propensity$lambda.min] %>% convert_to_prob()
@@ -539,11 +535,11 @@ plot_prob(pW_lasso.int, Wmod, "Lasso with Best Lambda", "Expanded")
 pW_glmnet.fit.propensity.int.lambda_preds <- as.data.table(pW_glmnet.fit.propensity.int$fit.preval)
 lambda_log_liks <- pW_glmnet.fit.propensity.int.lambda_preds[
   # see discussion in FIXME above about using convert_to_prob here
-  ,lapply(.SD, convert_to_prob), .SDcols = names(glmnet.fit.propensity.lambda_preds)][
-    ,lapply(.SD, loglike, Wmod), .SDcols = names(glmnet.fit.propensity.lambda_preds)]
+  ,lapply(.SD, convert_to_prob), .SDcols = names(pW_glmnet.fit.propensity.int.lambda_preds)][
+    ,lapply(.SD, loglike, Wmod), .SDcols = names(pW_glmnet.fit.propensity.int.lambda_preds)]
 
 colnames(lambda_log_liks) <- as.character(pW_glmnet.fit.propensity.int$lambda)
-lambda_log_liks.long <- melt(lambda_log_liks, id.vars = , variable.name = "lambda", value.name = "llh")
+lambda_log_liks.long <- melt(lambda_log_liks, variable.name = "lambda", value.name = "llh")
 lambda_log_liks.long[, lambda := as.numeric(as.character(lambda))]
 
 #' We now plot log likelihood over different values of lambda on the expanded data.  
