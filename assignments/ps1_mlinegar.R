@@ -586,7 +586,7 @@ pW_glmnet.fit.propensity.int.lambda_preds <- pW_glmnet.fit.propensity.int.lambda
 tauhat_lass_estimates.lambdas <- rbindlist(list(tauhat_lasso_ipw.lambdas,
                                                 tauhat_lasso_prop_score.lambdas,
                                                 tauhat_lasso_aipw.lambdas))
-
+#' \newpage
 #' We now plot our lasso estimates of $\hat{\tau}$ over our lambdas. 
 #+ echo=FALSE
 ggplot(tauhat_lass_estimates.lambdas, aes(x = lambda, y = ATE, color = model)) + 
@@ -622,6 +622,8 @@ ggplot(lambda_log_liks.long, aes(x = lambda, y = llh)) +
 #### EXPLORING RF ####
 # FIXME: copy analysis from above for RF, ideally varying N
 #### ATE CALCULATIONS: ORIGINAL DATA ####
+cf = causal_forest(Xmod, Ymod, Wmod, num.trees = 500)
+cf.int = causal_forest(Xmod.int, Ymod, Wmod, num.trees = 500)
 
 # linear models
 tauhat_ols <- ate_condmean_ols(df_mod)
