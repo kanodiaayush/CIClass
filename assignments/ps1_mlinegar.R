@@ -22,6 +22,8 @@ lambda <- c(0.0001, 0.01)
 #lambda <- c(0.0001, 0.001, 0.01, 0.1, 0.3, 0.5, 0.7, 1, 5, 10, 50, 100, 1000)
 prop_to_keep <- .5 # if you want to only run on a random sample of the data, if want to run on full data set to 1.0
 
+prop_drop_rf <- c(0.01, 0.02, 0.04, 0.1, 0.2, 0.3, 0.4)
+
 library(here)
 # devtools::install_github("hrbrmstr/hrbrthemes")
 # library(hrbrthemes)
@@ -644,6 +646,62 @@ ggplot(lambda_log_liks.long, aes(x = lambda, y = llh)) +
 
 #### EXPLORING RF ####
 # FIXME: copy analysis from above for RF, ideally varying N
+
+# RF
+ate_rf_aipw.int = average_treatment_effect(cf.int)
+tauhat_rf_aipw.int = c(ATE=ate_rf_aipw.int["estimate"],
+                       lower_ci=ate_rf_aipw.int["estimate"] - 1.96 * ate_rf_aipw.int["std.err"],
+                       upper_ci=ate_rf_aipw.int["estimate"] + 1.96 * ate_rf_aipw.int["std.err"])
+tauhat_rf_ipw.int = ipw(df_mod.int, pW_rf.int)
+tauhat_ols_rf_aipw.int = aipw_ols(df_mod.int, pW_rf.int)
+
+tauhat_rf_ipw.int
+tauhat_ols_rf_aipw.int
+
+
+tauhat_rf_list <- data.frame()
+tauhat_ols_rf_aipw_list <- data.frame()
+for (prob_temp in prop_drop_rf) {
+  # drop same proportion of treated and control units
+  drop_from_treat_temp <- base::sample(which(df_mod$W == 1), round(prob_temp * sum(df_mod$W == 1)))
+  drop_from_control_temp <- base::sample(which(df_mod$W == 0), round(prob_temp * sum(df_mod$W == 0)))
+  df_mod_temp <- df_mod[-c(drop_from_treat_temp, drop_from_control_temp),]
+  # df_mod_temp <- copy(df_mod)
+  Xmod_temp = df_mod_temp[,.SD, .SDcols = names(df_mod_temp)[!names(df_mod_temp) %in% c("Y", "W")]] %>% as.matrix()
+  Ymod_temp = df_mod_temp$Y
+  Wmod_temp = df_mod_temp$W
+  XWmod_temp = cbind(Xmod_temp, Wmod_temp)
+  pW_rf_temp.fit = regression_forest(Xmod_temp, Wmod_temp, num.trees = 500)
+  # pY_rf_mod.fit = regression_forest(Xmod_temp, Ymod_temp, num.trees = 500)
+  Xmod_temp.int = model.matrix(~ . * ., data = as.data.frame(Xmod_temp))
+  #XWmod_temp.int = cbind(Xmod_temp.int, Wmod_temp)
+  df_mod_temp.int <- Xmod_temp.int %>% as.data.frame %>% setDT()
+  df_mod_temp.int[,`:=`(W = Wmod_temp, Y = Ymod_temp)]
+  pW_rf_temp.int.fit = regression_forest(Xmod_temp.int, Wmod_temp, num.trees = 500)
+  # pY_rf_temp.int.fit = regression_forest(Xmod_temp.int, Ymod_temp, num.trees = 500)
+  pW_rf_temp.int = predict(pW_rf_temp.int.fit, newdata = Xmod_temp.int) %>% as.matrix
+  # pY_rf_temp.int = predict(pY_rf.fit.int, newdata = Xmod_temp.int)
+  
+  # pW_rf = pW_rf.fit$predictions
+  
+  tauhat_rf_temp.int = ipw(df_mod_temp.int, pW_rf_temp.int) %>% as.list() %>% data.frame()
+  tauhat_rf_temp.int$"prop_dropped" <- prob_temp
+  tauhat_rf_temp.int$model <- "rf_ipw"
+  tauhat_ols_rf_aipw_temp.int = aipw_ols(df_mod_temp.int, pW_rf_temp.int) %>% as.list() %>% data.frame()
+  tauhat_ols_rf_aipw_temp.int$"prop_dropped" <- prob_temp
+  tauhat_ols_rf_aipw_temp.int$model <- "rf_aipw"
+  
+  print(tauhat_rf_temp.int)
+  print(tauhat_ols_rf_aipw_temp.int)
+  tauhat_rf_list <- rbind(tauhat_rf_list, tauhat_rf_temp.int)
+  tauhat_ols_rf_aipw_list <- rbind(tauhat_ols_rf_aipw_list, tauhat_ols_rf_aipw_temp.int)
+}
+
+tauhat_rf_list <- rbind(tauhat_rf_list, tauhat_ols_rf_aipw_list)
+
+ggplot(tauhat_rf_list, aes(x = prop_dropped, y = ATE, color = model)) + geom_line() + 
+  ggtitle("ATE Estimate with Random Forests Given Varied Sample Sizes")
+
 #### ATE CALCULATIONS: ORIGINAL DATA ####
 cf = causal_forest(Xmod, Ymod, Wmod, num.trees = 500)
 cf.int = causal_forest(Xmod.int, Ymod, Wmod, num.trees = 500)
@@ -744,52 +802,6 @@ tauhat_lasso_logistic_aipw.int <- aipw_ols(df_mod.int, pW_lasso.int)
 #                          lower_ci=tau.hat-1.96*se.hat,
 #                          upper_ci=tau.hat+1.96*se.hat)
 
-# RF
-ate_rf_aipw.int = average_treatment_effect(cf.int)
-tauhat_rf_aipw.int = c(ATE=ate_rf_aipw.int["estimate"],
-                       lower_ci=ate_rf_aipw.int["estimate"] - 1.96 * ate_rf_aipw.int["std.err"],
-                       upper_ci=ate_rf_aipw.int["estimate"] + 1.96 * ate_rf_aipw.int["std.err"])
-tauhat_rf_ipw.int = ipw(df_mod.int, pW_rf.int)
-tauhat_ols_rf_aipw.int = aipw_ols(df_mod.int, pW_rf.int)
-
-tauhat_rf_ipw.int
-tauhat_ols_rf_aipw.int
-
-probs_temp <- c(0.01, 0.02, 0.04, 0.1, 0.2, 0.3, 0.4)
-tauhat_rf_list <- list()
-tauhat_ols_rf_aipw_list <- list()
-for (prob_temp in probs_temp) {
-  obs_to_remove_temp = df_mod[, partyid >= -1]
-#  prob_temp <- 0.4
-  drop_from_treat_temp <- base::sample(which(obs_to_remove_temp & df_mod$W == 1), round(prob_temp * sum(obs_to_remove_temp)))
-  drop_from_control_temp <- base::sample(which(obs_to_remove_temp & df_mod$W == 0), round(prob_temp * sum(obs_to_remove_temp)))
-  df_mod_temp <- df_mod[-c(drop_from_treat_temp, drop_from_control_temp),]
-  # df_mod_temp <- copy(df_mod)
-  Xmod_temp = df_mod_temp[,.SD, .SDcols = names(df_mod_temp)[!names(df_mod_temp) %in% c("Y", "W")]] %>% as.matrix()
-  Ymod_temp = df_mod_temp$Y
-  Wmod_temp = df_mod_temp$W
-  XWmod_temp = cbind(Xmod_temp, Wmod_temp)
-  pW_rf_temp.fit = regression_forest(Xmod_temp, Wmod_temp, num.trees = 500)
-  # pY_rf_mod.fit = regression_forest(Xmod_temp, Ymod_temp, num.trees = 500)
-  Xmod_temp.int = model.matrix(~ . * ., data = as.data.frame(Xmod_temp))
-  #XWmod_temp.int = cbind(Xmod_temp.int, Wmod_temp)
-  df_mod_temp.int <- Xmod_temp.int %>% as.data.frame %>% setDT()
-  df_mod_temp.int[,`:=`(W = Wmod_temp, Y = Ymod_temp)]
-  pW_rf_temp.int.fit = regression_forest(Xmod_temp.int, Wmod_temp, num.trees = 500)
-  # pY_rf_temp.int.fit = regression_forest(Xmod_temp.int, Ymod_temp, num.trees = 500)
-  pW_rf_temp.int = predict(pW_rf_temp.int.fit, newdata = Xmod_temp.int) %>% as.matrix
-  # pY_rf_temp.int = predict(pY_rf.fit.int, newdata = Xmod_temp.int)
-  
-  # pW_rf = pW_rf.fit$predictions
-  
-  tauhat_rf_temp.int = ipw(df_mod_temp.int, pW_rf_temp.int)
-  tauhat_ols_rf_aipw_temp.int = aipw_ols(df_mod_temp.int, pW_rf_temp.int)
-  print(tauhat_rf_temp.int)
-  print(tauhat_ols_rf_aipw_temp.int)
-  tauhat_rf_list <- append(tauhat_rf_list, tauhat_rf_temp.int)
-  tauhat_ols_rf_aipw_list <- append(tauhat_ols_rf_aipw_list, tauhat_ols_rf_aipw_temp.int)
-}
-  
 #### COMPARING ATE ACROSS MODELS ####
 #' ## Comparing ATE Across Models with Original Data
 #' Finally, we compare ATE across various models. We see that AIPW forest methods performs the best across the original and interacted data,
