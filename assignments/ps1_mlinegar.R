@@ -22,7 +22,7 @@ lambda <- c(0.0001, 0.01)
 #lambda <- c(0.0001, 0.001, 0.01, 0.1, 0.3, 0.5, 0.7, 1, 5, 10, 50, 100, 1000)
 prop_to_keep <- .5 # if you want to only run on a random sample of the data, if want to run on full data set to 1.0
 
-prop_drop_rf <- c(0.01, 0.02, 0.04, 0.1, 0.2, 0.3, 0.4)
+prop_drop_rf <- c(0.01, 0.02, 0.04, 0.1, 0.2, 0.3, 0.4, .5, .7, .8, .9)
 
 library(here)
 # devtools::install_github("hrbrmstr/hrbrthemes")
@@ -645,7 +645,9 @@ ggplot(lambda_log_liks.long, aes(x = lambda, y = llh)) +
   coord_cartesian(x = c(0,1))
 
 #### EXPLORING RF ####
-# FIXME: copy analysis from above for RF, ideally varying N
+#' \newpage
+#' ## Exploring Random Forest Performance with Sample Size
+#' To show how sample size is is important for random forest performance, we compare ATE estimates across sample size.
 
 # RF
 ate_rf_aipw.int = average_treatment_effect(cf.int)
@@ -700,7 +702,8 @@ for (prob_temp in prop_drop_rf) {
 tauhat_rf_list <- rbind(tauhat_rf_list, tauhat_ols_rf_aipw_list)
 
 ggplot(tauhat_rf_list, aes(x = prop_dropped, y = ATE, color = model)) + geom_line() + 
-  ggtitle("ATE Estimate with Random Forests Given Varied Sample Sizes")
+  ggtitle("ATE Estimate with Random Forests Given Varied Sample Sizes") + 
+  geom_abline(aes(slope = 0, intercept = tauhat_rct["ATE"]))
 
 #### ATE CALCULATIONS: ORIGINAL DATA ####
 cf = causal_forest(Xmod, Ymod, Wmod, num.trees = 500)
