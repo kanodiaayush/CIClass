@@ -467,14 +467,22 @@ pW_lasso.int.rand = pW_glmnet.fit.propensity.int$fit.preval[, pW_glmnet.fit.prop
 # pW_lasso.int6 <- predict(pW_glmnet.fit.propensity.int, newx = Xmod.int,  s=pW_glmnet.fit.propensity.int$lambda[1], type = "response")
 
 # random forest
-cf = causal_forest(Xmod, Ymod, Wmod, num.trees = 500)
-pW_rf = cf$W.hat
-pY_rf = cf$Y.hat
-cf.int = causal_forest(Xmod.int, Ymod, Wmod, num.trees = 500)
-pW_rf.int = cf.int$W.hat
-pY_rf.int = cf.int$Y.hat
+pW_rf.fit = regression_forest(Xmod, Wmod, num.trees = 500)
+pY_rf.fit = regression_forest(Xmod, Ymod, num.trees = 500)
 
-pY_rf.int2 = predict(cf.int, newdata = Xmod.int)
+# pW_rf = pW_rf.fit$predictions
+# pY_rf = pY_rf.fit$predictions
+pW_rf = predict(pW_rf.fit, newdata = Xmod)
+pY_rf = predict(pY_rf.fit, newdata = Xmod)
+
+# random forest, expanded data
+pW_rf.fit.int = regression_forest(Xmod.int, Wmod, num.trees = 500)
+pY_rf.fit.int = regression_forest(Xmod.int, Ymod, num.trees = 500)
+
+# pW_rf.int = pW_rf.fit.int$predictions
+# pY_rf.int = pY_rf.fit.int$predictions
+pW_rf.int = predict(pW_rf.fit.int, newdata = Xmod)
+pY_rf.int = predict(pY_rf.fit.int, newdata = Xmod)
 
 # hist(pW_rf)
 #### BIAS FUNCTION ####
