@@ -565,7 +565,6 @@ pW_glmnet.fit.propensity.int.lambda_preds <- pW_glmnet.fit.propensity.int.lambda
   ,lapply(.SD, convert_to_prob), .SDcols = names(pW_glmnet.fit.propensity.int.lambda_preds)]
 
 # credit to Kaleb for this formulation
-<<<<<<< HEAD
  tauhat_lasso_ipw.lambdas <- rbindlist(lapply(1:ncol(pW_glmnet.fit.propensity.int.lambda_preds), function(p){
   data.frame(lambda=pW_glmnet.fit.propensity.int$lambda[p],"ATE"=ipw(df_mod.int, as.matrix(pW_glmnet.fit.propensity.int.lambda_preds[,..p]))["ATE"])
 }))[, model := "ipw"]
@@ -577,19 +576,6 @@ pW_glmnet.fit.propensity.int.lambda_preds <- pW_glmnet.fit.propensity.int.lambda
  tauhat_lasso_aipw.lambdas <- rbindlist(lapply(1:ncol(pW_glmnet.fit.propensity.int.lambda_preds), function(p){
    data.frame(lambda=pW_glmnet.fit.propensity.int$lambda[p],"ATE"=aipw_ols(df_mod.int, as.matrix(pW_glmnet.fit.propensity.int.lambda_preds[,..p]))["ATE"])
  }))[, model := "aipw"]
-=======
-tauhat_lasso_ipw.lambdas <- rbindlist(lapply(1:ncol(pW_glmnet.fit.propensity.int.lambda_preds), function(p){
-  data.frame(lambda=pW_glmnet.fit.propensity.int$lambda[p],"ATE"=ipw(df_mod.int, as.matrix(pW_glmnet.fit.propensity.int.lambda_preds[,..p]))["ATE"])
-}))[, model := "ipw"]
-
-tauhat_lasso_prop_score.lambdas <- rbindlist(lapply(1:ncol(pW_glmnet.fit.propensity.int.lambda_preds), function(p){
-  data.frame(lambda=pW_glmnet.fit.propensity.int$lambda[p],"ATE"=prop_score_ols(df_mod.int, as.matrix(pW_glmnet.fit.propensity.int.lambda_preds[,..p]))["ATE"])
-}))[, model := "prop_score"]
-
-tauhat_lasso_aipw.lambdas <- rbindlist(lapply(1:ncol(pW_glmnet.fit.propensity.int.lambda_preds), function(p){
-  data.frame(lambda=pW_glmnet.fit.propensity.int$lambda[p],"ATE"=aipw_ols(df_mod.int, as.matrix(pW_glmnet.fit.propensity.int.lambda_preds[,..p]))["ATE"])
-}))[, model := "aipw"]
->>>>>>> 876f2a3088166c76d799775073465eb50fa45441
 
 tauhat_lass_estimates.lambdas <- rbindlist(list(tauhat_lasso_ipw.lambdas,
                                                 tauhat_lasso_prop_score.lambdas,
@@ -603,11 +589,7 @@ ggplot(tauhat_lass_estimates.lambdas, aes(x = lambda, y = ATE, color = model)) +
 
 # likelihoods over lambdas
 lambda_log_liks <- pW_glmnet.fit.propensity.int.lambda_preds[
-<<<<<<< HEAD
-    ,lapply(.SD, loglike, Wmod), .SDcols = names(pW_glmnet.fit.propensity.int.lambda_preds)]
-=======
   ,lapply(.SD, loglike, Wmod), .SDcols = names(pW_glmnet.fit.propensity.int.lambda_preds)]
->>>>>>> 876f2a3088166c76d799775073465eb50fa45441
 
 colnames(lambda_log_liks) <- as.character(pW_glmnet.fit.propensity.int$lambda)
 lambda_log_liks.long <- melt(lambda_log_liks, variable.name = "lambda", value.name = "llh")
