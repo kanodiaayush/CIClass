@@ -330,7 +330,7 @@ print(tauhat_rct)
 #+ echo=false
 # FIXME: this doesn't seem to add enough bias
 # these cutoffs courtesy of Kaleb (poc, .45 and .01)
-prob = .2
+prob = .5
 # prob_control = prob # how much of the sample are we dropping?
 # prop_treatment = prob
 prob_control = 0.45  # how much of the sample are we dropping?
@@ -347,16 +347,19 @@ prob_treatment = 0.01
 setDT(df)
 # college_educ_lib_dems = df[, partyid < 3 & reg16 <= 16 & degree <=1] #  & df$educ >= 16 & df$polviews < 3.5
 # how to find a good sample? use a forest for splitting!
+
 # library(rpart)
 # library(rpart.plot)
 # mypart <- rpart(Y ~ . - W, data = df, cp=0.001)
 # rpart.plot::rpart.plot(mypart)
 
 # alternative (better), courtesy of Kaleb:
-poc =   df$race != 1
+# poc =   df$race != 1
 
 # obs_to_remove = df[, partyid >= 4 & partyid < 7 & polviews >= 5.5 & polviews < 8 & prestg80 >= 34]
-obs_to_remove = poc
+# Our method:
+obs_to_remove = df[, partyid < 4 & educ >= 16]
+#obs_to_remove = poc
 # obs_to_remove = df[,((persons > 1) | (newreg > 0)) | ((competiv > 1)) | (vote00 == 1)]
 mean(df$Y[obs_to_remove])
 mean(df$Y[!obs_to_remove])
@@ -368,10 +371,27 @@ drop_from_control <- base::sample(which(!obs_to_remove & df$W == 0), round(prob_
 df_mod <- df[-c(drop_from_treat, drop_from_control),]
 
 #' The difference in means is now biased, and significantly outside the confidence interval indicated by the RCT.  
+#' Check if difference in treatment effect estimates is substantial
 tauhat_confounded <- difference_in_means(df_mod)
 tauhat_confounded
 
+Xmod = df_mod[,.SD, .SDcols = names(df_mod)[!names(df_mod) %in% c("Y", "W")]] %>% as.matrix()
+Ymod = df_mod$Y
+Wmod = df_mod$W
+XWmod = cbind(Xmod, Wmod)
+pW_logistic.fit <- glm(Wmod ~ as.matrix(Xmod), family = "binomial")
+pW_logistic <- predict(pW_logistic.fit, type = "response")
+# linear models
+tauhat_logistic_ipw <- ipw(df_mod, pW_logistic)
+tauhat_pscore_ols <- prop_score_ols(df_mod, pW_logistic)
+tauhat_lin_logistic_aipw <- aipw_ols(df_mod, pW_logistic)
+
+tauhat_logistic_ipw 
+tauhat_pscore_ols 
+tauhat_lin_logistic_aipw 
+
 #### LOGISTIC PROPENSITY SCORES ####
+# df_mod <- copy(df)
 Xmod = df_mod[,.SD, .SDcols = names(df_mod)[!names(df_mod) %in% c("Y", "W")]] %>% as.matrix()
 Ymod = df_mod$Y
 Wmod = df_mod$W
@@ -517,11 +537,11 @@ ggplot(df_mod_bias, aes(x = b)) + geom_histogram() + labs(title = "Histogram of 
 #' Models closer to the 45-degree line are better.  
 #+ echo = false
 
-plot_prob(pW_logistic, Wmod, "Linear")
-plot_prob(pW_lasso, Wmod, "Lasso")
+plot_prob(pW_logistic, Wmod, "Logistic")
+plot_prob(pW_lasso.min, Wmod, "Lasso")
 plot_prob(pW_rf, Wmod, "Random Forest")
-plot_prob(pW_logistic.int, Wmod, "Linear", "Expanded")
-plot_prob(pW_lasso.int, Wmod, "Lasso", "Expanded")
+plot_prob(pW_logistic.int, Wmod, "Logistic", "Expanded")
+plot_prob(pW_lasso.int.min, Wmod, "Lasso", "Expanded")
 plot_prob(pW_rf.int, Wmod, "Random Forest", "Expanded")
 
 #### EXPLORING LASSO ####
@@ -545,6 +565,7 @@ pW_glmnet.fit.propensity.int.lambda_preds <- pW_glmnet.fit.propensity.int.lambda
   ,lapply(.SD, convert_to_prob), .SDcols = names(pW_glmnet.fit.propensity.int.lambda_preds)]
 
 # credit to Kaleb for this formulation
+<<<<<<< HEAD
  tauhat_lasso_ipw.lambdas <- rbindlist(lapply(1:ncol(pW_glmnet.fit.propensity.int.lambda_preds), function(p){
   data.frame(lambda=pW_glmnet.fit.propensity.int$lambda[p],"ATE"=ipw(df_mod.int, as.matrix(pW_glmnet.fit.propensity.int.lambda_preds[,..p]))["ATE"])
 }))[, model := "ipw"]
@@ -556,6 +577,19 @@ pW_glmnet.fit.propensity.int.lambda_preds <- pW_glmnet.fit.propensity.int.lambda
  tauhat_lasso_aipw.lambdas <- rbindlist(lapply(1:ncol(pW_glmnet.fit.propensity.int.lambda_preds), function(p){
    data.frame(lambda=pW_glmnet.fit.propensity.int$lambda[p],"ATE"=aipw_ols(df_mod.int, as.matrix(pW_glmnet.fit.propensity.int.lambda_preds[,..p]))["ATE"])
  }))[, model := "aipw"]
+=======
+tauhat_lasso_ipw.lambdas <- rbindlist(lapply(1:ncol(pW_glmnet.fit.propensity.int.lambda_preds), function(p){
+  data.frame(lambda=pW_glmnet.fit.propensity.int$lambda[p],"ATE"=ipw(df_mod.int, as.matrix(pW_glmnet.fit.propensity.int.lambda_preds[,..p]))["ATE"])
+}))[, model := "ipw"]
+
+tauhat_lasso_prop_score.lambdas <- rbindlist(lapply(1:ncol(pW_glmnet.fit.propensity.int.lambda_preds), function(p){
+  data.frame(lambda=pW_glmnet.fit.propensity.int$lambda[p],"ATE"=prop_score_ols(df_mod.int, as.matrix(pW_glmnet.fit.propensity.int.lambda_preds[,..p]))["ATE"])
+}))[, model := "prop_score"]
+
+tauhat_lasso_aipw.lambdas <- rbindlist(lapply(1:ncol(pW_glmnet.fit.propensity.int.lambda_preds), function(p){
+  data.frame(lambda=pW_glmnet.fit.propensity.int$lambda[p],"ATE"=aipw_ols(df_mod.int, as.matrix(pW_glmnet.fit.propensity.int.lambda_preds[,..p]))["ATE"])
+}))[, model := "aipw"]
+>>>>>>> 876f2a3088166c76d799775073465eb50fa45441
 
 tauhat_lass_estimates.lambdas <- rbindlist(list(tauhat_lasso_ipw.lambdas,
                                                 tauhat_lasso_prop_score.lambdas,
@@ -569,7 +603,11 @@ ggplot(tauhat_lass_estimates.lambdas, aes(x = lambda, y = ATE, color = model)) +
 
 # likelihoods over lambdas
 lambda_log_liks <- pW_glmnet.fit.propensity.int.lambda_preds[
+<<<<<<< HEAD
     ,lapply(.SD, loglike, Wmod), .SDcols = names(pW_glmnet.fit.propensity.int.lambda_preds)]
+=======
+  ,lapply(.SD, loglike, Wmod), .SDcols = names(pW_glmnet.fit.propensity.int.lambda_preds)]
+>>>>>>> 876f2a3088166c76d799775073465eb50fa45441
 
 colnames(lambda_log_liks) <- as.character(pW_glmnet.fit.propensity.int$lambda)
 lambda_log_liks.long <- melt(lambda_log_liks, variable.name = "lambda", value.name = "llh")
