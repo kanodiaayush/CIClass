@@ -328,12 +328,17 @@ print(tauhat_rct)
 #' ## Introducing Bias
 #+ echo=false
 # FIXME: this doesn't seem to add enough bias
-prob_control = 0.05  # how much of the sample are we dropping?
-prob_treatment = 0.2
+# these cutoffs courtesy of Kaleb (poc, .45 and .01)
 prob = .2
+# prob_control = prob # how much of the sample are we dropping?
+# prop_treatment = prob
+prob_control = 0.45  # how much of the sample are we dropping?
+prob_treatment = 0.01
+
 #' We now introduce sampling bias in order to simulate the situation we would be in if our data was from an observational study rather than a randomized experiment. 
 #' This situation might arise due to sampling error or selection bias, and we will be able to see how various methods correct for this induced bias. 
 #' To do, so, we under-sample treated units matching the following rule, and under-sample control units in its complement:  
+#' FIXME: replace with POC discussion
 #'       - Republican-leaning independent or closer to the Republican party (`partyid >= 4 & partyid < 7`)  
 #'       - More than slightly conservative (`polviews >= 5.5 & polviews < 8`)  
 #'       - with self-reported prestige of occuption above the bottom quartile (`prestg80 >= 34`)  
@@ -345,15 +350,19 @@ setDT(df)
 # library(rpart.plot)
 # mypart <- rpart(Y ~ . - W, data = df, cp=0.001)
 # rpart.plot::rpart.plot(mypart)
-obs_to_remove = df[, partyid >= 4 & partyid < 7 & polviews >= 5.5 & polviews < 8 & prestg80 >= 34]
+
+# alternative (better), courtesy of Kaleb:
+poc =   df$race != 1
+
+# obs_to_remove = df[, partyid >= 4 & partyid < 7 & polviews >= 5.5 & polviews < 8 & prestg80 >= 34]
+obs_to_remove = poc
 # obs_to_remove = df[,((persons > 1) | (newreg > 0)) | ((competiv > 1)) | (vote00 == 1)]
-# mean(poor_or_nonwhite)
 mean(df$Y[obs_to_remove])
 mean(df$Y[!obs_to_remove])
 
 
-drop_from_treat <- base::sample(which(obs_to_remove & df$W == 1), round(prob * sum(obs_to_remove)))
-drop_from_control <- base::sample(which(!obs_to_remove & df$W == 0), round(prob * sum(!obs_to_remove)))
+drop_from_treat <- base::sample(which(obs_to_remove & df$W == 1), round(prob_treatment * sum(obs_to_remove)))
+drop_from_control <- base::sample(which(!obs_to_remove & df$W == 0), round(prob_control * sum(!obs_to_remove)))
 
 # FIXME: don't do this way
 # drop_treat <- base::sample(which(obs_to_remove & df$W == 1), 15000)
@@ -466,7 +475,7 @@ B <- function(df, treatment_model, outcome_model, outcome_type = "response"){
   # note that this will NOT work for lasso model, attempt to warn of this misbehavior:
   if (grepl("lasso|rf|cf", deparse(quote(treatment_model)))){
     simpleMessage("The predict method appears to be broken for lasso models estimated using glmnet::cv.glmnet.
-                You may want to try another predictive model. 
+                  You may want to try another predictive model. 
                   I am unclear how predict works using predict.causal_forest, and so currently do not recommend it.")
   }
   df = copy(df)
@@ -479,12 +488,12 @@ B <- function(df, treatment_model, outcome_model, outcome_type = "response"){
   pW <- predict(treatment_model, newdata = df[,.SD, .SDcols = !c('W', 'Y')], type = "response")
   df[, `:=`(W = NULL, pY_w0 = pY_w0, pY_w1 = pY_w1, pW = pW)]
   
-
+  
   df[, b := (pW - p) * (p * (pY_w0 - mu0) + (1 - p) * (pY_w1 - mu1))]
   
   # 1/(p*(1-p)) * df[, mean(b)]
   return(df[,.(b)])
-}
+  }
 
 df_mod_bias <- B(df_mod, pW_logistic.fit, pY_logistic.fit)
 ggplot(df_mod_bias, aes(x = b)) + geom_histogram() + labs(title = "Histogram of per-observation b(x)")
@@ -729,11 +738,11 @@ propensity_stratification <- function(df, treatment_model, n_strata = 10, tau_es
   
   # sloppy but can't figure out right solution atm
   strata_tau_est <- df[pW_strata %in% strata_to_keep, .(tauhat = tau_estimator(.SD)[1],
-                                      lower_ci = tau_estimator(.SD)[2],
-                                      upper_ci = tau_estimator(.SD)[3]), by = .(pW_strata)][
-      ,.(tauhat = mean(tauhat),
-         lower_ci = mean(lower_ci),
-         upper_ci = mean(upper_ci))]
+                                                        lower_ci = tau_estimator(.SD)[2],
+                                                        upper_ci = tau_estimator(.SD)[3]), by = .(pW_strata)][
+                                                          ,.(tauhat = mean(tauhat),
+                                                             lower_ci = mean(lower_ci),
+                                                             upper_ci = mean(upper_ci))]
   return(c(ATE = strata_tau_est$tauhat, lower_ci = strata_tau_est$lower_ci, upper_ci = strata_tau_est$upper_ci))
 }
 
@@ -779,13 +788,14 @@ for (i in 1:n_sims){
   sim_pW_logistic <- predict(sim_pW_logistic.fit, type = "response")
   
   tau_ests <- rbind(
+    c(df[,mean(W * V2)], NA, NA),
     difference_in_means(df),
     ipw(df, sim_pW_logistic),
     propensity_stratification(df, sim_pW_logistic.fit)  
   ) %>% as.data.frame()
   
   tau_ests$sim_num <- i
-  tau_ests$est <- c("difference_in_means", "ipw", "propensity_stratification")
+  tau_ests$est <- c("true", "difference_in_means", "ipw", "propensity_stratification")
   sim_storage <- rbindlist(list(sim_storage, tau_ests), fill = TRUE)
 }
 
