@@ -3,6 +3,7 @@
 #' author: "Mitchell Linegar"
 #' toc: true
 #' toc_depth: 2
+#' includes:
 #'   pdf_document:
 #'     number_sections: true
 #'     df_print: paged
@@ -17,6 +18,7 @@ outcome_family <- "binomial" # based on whether your outcome is binary or not; i
 outcome_type <- "class"
 n_sims <- 20
 lambda <- c(0.0001, 0.001, 0.01, 0.1, 0.3, 0.5, 0.7, 1, 5, 10, 50, 100, 1000)
+prop_to_keep <- .5 # if you want to only run on a random sample of the data, if want to run on full data set to 1.0
 
 library(here)
 # devtools::install_github("hrbrmstr/hrbrthemes")
@@ -32,7 +34,6 @@ devtools::install_github("swager/amlinear") # install amlinear package
 library(amlinear)
 
 #### KNITR SETUP ####
-#'
 #+ setup, include=FALSE
 knitr::opts_chunk$set(
   echo = FALSE,
@@ -275,7 +276,7 @@ if (dataset_name == "social") {
 
 #### SETUP TEXT ####
 #' # Part One
-#' This problem set examines the `r dataset_name` data set. Throughout, the treatment variable will be referred to as `r treatment_variable` and the outcome variable will be referred to as `r outcome_variable`. 
+#' This problem set examines the `r dataset_name` data set. Throughout, the treatment variable will be referred to as `r treatment_variable_name` and the outcome variable will be referred to as `r outcome_variable_name`. 
 
 #### DATA WORK ####
 # follows tutorial exactly
@@ -295,6 +296,11 @@ df <- data.frame(lapply(df, function(x) as.numeric(as.character(x))))
 
 # coerce to data.table for future analysis
 setDT(df)
+
+# if option supplied to randomly subset, do so
+df <- df[base::sample(1:nrow(df), prop_to_keep * nrow(df))]
+
+
 #### TESTING ASSUMPTIONS ####
 df_mod = copy(df)
 setDT(df_mod)
@@ -472,8 +478,8 @@ pY_rf.fit = regression_forest(Xmod, Ymod, num.trees = 500)
 
 # pW_rf = pW_rf.fit$predictions
 # pY_rf = pY_rf.fit$predictions
-pW_rf = predict(pW_rf.fit, newdata = Xmod)
-pY_rf = predict(pY_rf.fit, newdata = Xmod)
+pW_rf = predict(pW_rf.fit, newdata = Xmod) %>% as.matrix
+pY_rf = predict(pY_rf.fit, newdata = Xmod) %>% as.matrix
 
 # random forest, expanded data
 pW_rf.fit.int = regression_forest(Xmod.int, Wmod, num.trees = 500)
@@ -481,8 +487,8 @@ pY_rf.fit.int = regression_forest(Xmod.int, Ymod, num.trees = 500)
 
 # pW_rf.int = pW_rf.fit.int$predictions
 # pY_rf.int = pY_rf.fit.int$predictions
-pW_rf.int = predict(pW_rf.fit.int, newdata = Xmod)
-pY_rf.int = predict(pY_rf.fit.int, newdata = Xmod)
+pW_rf.int = predict(pW_rf.fit.int, newdata = Xmod.int) %>% as.matrix
+pY_rf.int = predict(pY_rf.fit.int, newdata = Xmod.int) %>% as.matrix
 
 # hist(pW_rf)
 #### BIAS FUNCTION ####
@@ -585,7 +591,14 @@ tauhat_lass_estimates.lambdas <- rbindlist(list(tauhat_lasso_ipw.lambdas,
 #+ echo=FALSE
 ggplot(tauhat_lass_estimates.lambdas, aes(x = lambda, y = ATE, color = model)) + 
   geom_line() + 
-  geom_abline(aes(slope = 0, intercept = tauhat_rct["ATE"]))
+  geom_abline(aes(slope = 0, intercept = tauhat_rct["ATE"])) + 
+  ggtitle("Tauhat estimates over Lambda")
+
+ggplot(tauhat_lass_estimates.lambdas, aes(x = lambda, y = ATE, color = model)) + 
+  geom_line() + 
+  geom_abline(aes(slope = 0, intercept = tauhat_rct["ATE"])) + 
+  coord_cartesian(ylim = c(tauhat_rct["lower_ci"], tauhat_rct["upper_ci"])) + 
+  ggtitle("Tauhat estimates over Lambdas, zoomed in")
 
 # likelihoods over lambdas
 lambda_log_liks <- pW_glmnet.fit.propensity.int.lambda_preds[
@@ -600,6 +613,11 @@ lambda_log_liks.long[, lambda := as.numeric(as.character(lambda))]
 ggplot(lambda_log_liks.long, aes(x = lambda, y = llh)) + 
   geom_line() + 
   labs(title = "Log-Likelihood over Lambdas for Predicting W")
+
+ggplot(lambda_log_liks.long, aes(x = lambda, y = llh)) + 
+  geom_line() + 
+  labs(title = "Log-Likelihood over Lambdas for Predicting W, Zoomed in") + 
+  coord_cartesian(x = c(0,1))
 
 #### EXPLORING RF ####
 # FIXME: copy analysis from above for RF, ideally varying N
