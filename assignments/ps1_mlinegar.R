@@ -967,3 +967,31 @@ for (i in 1:n_sims){
 }
 
 ggplot(sim_storage, aes(x = sim_num, y = ATE, color = est)) + geom_line()
+
+##### COPY OF OTHER FUNCTIONS ####
+#' # APPENDIX: ADDITIONAL FUNCTIONS USED
+#' In this section, we include a number of other functions necessary to run this code. We do not include any functions defined in any of the tutorials. 
+#+ echo=TRUE
+plot_prob <- function(prob, pred, model_name = "", data_name = ""){
+  model = deparse(quote(Wmod)) %>% substr(0,1)
+  stopifnot(model %in% c("W", "Y"))
+  data_text = ifelse(data_name=="","", sprintf(", with %s data", data_name))
+  ggplot(data.frame(prob, pred), aes(x = prob, y = pred)) + 
+    geom_point(alpha = .01) +
+    # geom_smooth() + 
+    geom_smooth(method = lm, formula = y ~ splines::bs(x, 4), se = TRUE) + 
+    geom_abline(intercept = 0, slope = 1) + 
+    labs(title = sprintf("Predicted %s Propensity vs Actual %s%s", model_name, model, data_text),
+         x = sprintf("Predicted %s", model),
+         y = sprintf("Observed %s", model)) + 
+    xlim(0,1) + 
+    ylim(0,1)
+}
+
+convert_to_prob <- function(x){
+  1/(1 + exp(-x))
+}
+
+loglike <- function(pred, data){
+  mean(data * log(pred) + (1 - data) * log(1 - pred))
+}
