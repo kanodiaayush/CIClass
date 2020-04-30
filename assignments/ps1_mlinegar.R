@@ -333,7 +333,7 @@ print(tauhat_rct)
 
 #### SAMPLING BIAS ####
 #' ## Introducing Bias
-#+ echo=false
+#+ echo=FALSE
 # FIXME: this doesn't seem to add enough bias
 # these cutoffs courtesy of Kaleb (poc, .45 and .01)
 prob = .5
@@ -494,7 +494,7 @@ pY_rf.int = predict(pY_rf.fit.int, newdata = Xmod.int) %>% as.matrix
 #### BIAS FUNCTION ####
 #' Next we plot the bias function $b(X)$ following Athey, Imbens, Pham and Wager (AER P&P, 2017, Section IIID). 
 #' We plot $b(x)$ for all units in the sample, and see that the bias seems evenly distributed around zero.  
-#+ echo=false
+#+ echo=FALSE
 
 mu_avg <- function(treated, df){df[W==treated, mean(Y)]}
 mu <- function(treated, df){df[W==treated, mean(pY)]}
@@ -541,7 +541,7 @@ ggplot(df_mod_bias, aes(x = b)) + geom_histogram() + labs(title = "Histogram of 
 #' \newpage
 #' We first plot propensity scores against treatment status on the original and expanded set of coefficients. 
 #' Models closer to the 45-degree line are better.  
-#+ echo = false
+#+ echo = FALSE
 
 plot_prob(pW_logistic, Wmod, "Logistic")
 plot_prob(pW_lasso.min, Wmod, "Lasso")
@@ -555,7 +555,7 @@ plot_prob(pW_rf.int, Wmod, "Random Forest", "Expanded")
 #' \newpage
 #' To show how cross-validating lambda is important for the lasso, we compare predicted and actual treatment status for the minimum, maximum, a randomly selected, and the lambda that minimizes MSE (already shown above). 
 #' The lasso with the best lamda is the one closest to the 45-degree line. 
-#+ echo = false
+#+ echo = FALSE
 plot_prob(pW_lasso.int.min, Wmod, "Lasso with Min Lambda", "Expanded")
 plot_prob(pW_lasso.int.max, Wmod, "Lasso with Max Lambda", "Expanded")
 plot_prob(pW_lasso.int.rand, Wmod, "Lasso with Random Lambda", "Expanded")
@@ -609,7 +609,7 @@ lambda_log_liks.long <- melt(lambda_log_liks, variable.name = "lambda", value.na
 lambda_log_liks.long[, lambda := as.numeric(as.character(lambda))]
 
 #' We now plot log likelihood over different values of lambda on the expanded data.  
-#+ echo=false
+#+ echo=FALSE
 ggplot(lambda_log_liks.long, aes(x = lambda, y = llh)) + 
   geom_line() + 
   labs(title = "Log-Likelihood over Lambdas for Predicting W")
@@ -729,7 +729,7 @@ tauhat_ols_rf_aipw.int = aipw_ols(df_mod.int, pW_rf.int)
 
 #### COMPARING ATE ACROSS MODELS ####
 #' ## Comparing ATE Across Models with Original Data
-#+ echo=false
+#+ echo=FALSE
 all_estimators = rbind(
   RCT_gold_standard = tauhat_rct,
   naive_observational = tauhat_confounded,
@@ -751,7 +751,7 @@ all_estimators$ci_length = all_estimators$upper_ci - all_estimators$lower_ci
 print(round(as.matrix(all_estimators), 3))
 
 #' ## Comparing ATE Across Models with Interacted Data
-#+ echo=false
+#+ echo=FALSE
 # FIXME: add identical setup for non-interacted models (remove .int, copy code from above and add to own section)
 all_estimators.int = rbind(
   RCT_gold_standard = tauhat_rct,
