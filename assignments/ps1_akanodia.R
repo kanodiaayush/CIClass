@@ -40,8 +40,8 @@ library(amlinear)
 #### KNITR SETUP ####
 #+ setup, include=FALSE
 knitr::opts_chunk$set(
-  eval=FALSE,
-  echo = FALSE,
+  eval= TRUE,
+  echo = TRUE,
   cache = TRUE, 
   warning = FALSE,
   message = FALSE,
@@ -940,8 +940,9 @@ tauhat_lasso_logistic_aipw.int <- aipw_ols(df_mod.int, pW_lasso.int)
 
 #### COMPARING ATE ACROSS MODELS ####
 #' ## Comparing ATE Across Models with Original Data
-#' Finally, we compare ATE across various models. We see that AIPW forest methods performs the best across the original and interacted data,
-#' though propensity weighted regression performed on the original data.
+#' We now show ATE estimates and Confidence Intervals across models.
+#' AIPW with forest methods provides the most accurate measurements with small confidence intervals.
+#' This is true for both the original as well as interacted data
 #+ echo=FALSE
 all_estimators = rbind(
   RCT_gold_standard = tauhat_rct,
@@ -990,16 +991,19 @@ print(round(as.matrix(all_estimators.int), 3))
 #### PROPENSITY STRATIFICATION INTRODUCTION ####
 #' # Part Two
 #' 
-#' ## Justification of Propensity Stratification
-#' Propensity stratification follows the same principle as stratified random experiments, 
-#' where we would assign treatment after breaking people into groups based on their observable characteristics. 
-#' This would ensure balance between treated and control units within strata (it would allow us to avoid overlap problems if done correctly). 
-#' Propensity-based stratification functions similarly, as we are only comparing units with similar observable characteristics. 
-#' Propensity scores provide a single-dimensional, unified measure with which to compare units. 
-#' By comparing only "similar" units, 
-#' we can ensure that our estimate of the treatment effect should be more accurate. 
-#' By averaging our predictions over these strata, we can reduce the effect of bias present in only parts of the covariate space. 
-#' When we increase the number of strata (fixing N), we narrow our comparison to more similar units, and reduce the effect of any poorly-estimated strata.  
+#' Why does propensity stratification work?
+#' We need the unconfoundedness assumption, that is the potential outcomes are uncorrelated with the treatment assignments given the pretreatment covariates
+#' In Propensity Score weighting, we deduce that for units with the same propensity score, once we know the propensity score, the unconfoundedness assumption holds.
+#' In other words, instead of equalising on the covariates, we can equalise on the propensity score given covariates.
+#' The idea is that even if the covariates are different, but the propensity score of treatment is the same, the latter is a complete statistic summarising all the
+#' confounding due to covariates. Put differently and simplistically, if there are two different Xs, if their propensity of treatment is the same, then we are again
+#' in the completely randomized design setup where the probability of treatment is independent of covariates (assume there are only these two covariates)
+#' As such, stratification on propensity scores resembles a high dimensional version of a stratified random experiment, where the strata are formed over higher dimensions
+#' using the Propensity Score, learned from some Machine Learning predictive model.
+#' Now, as we grow the number of samples, we should improve upon our estimates even with the same number of strata.
+#' If we increase the number of strata, we do finer stratification, reducing inter strata differences as in a stratified random design.
+#' Hence, we reduce bias, tending to no bias, as we increase the number of strata with more number of points. More points are required for more strata because otherwise,
+#' the effects we calculate in each strata might be too noisy with too few points.
 
 #### PROPENSITY STRATIFICATION FUNCTION ####
 #' ## Propensity Stratification Function
@@ -1010,11 +1014,15 @@ print(round(as.matrix(all_estimators.int), 3))
 #' The function takes options for a number of strata and the function to estimate on the strata - 
 #' the user could supply something more complex than the simple difference-in-means, for example.  
 #' 
-#' The function checks that each strata has both treatment groups; if it does not then it is not included in the ATE calculation.  
+#' What do we do if some strata has only treatment or only control or no units? 
+#' We exclude it from our calculations entirely
 #' 
-#' We fix the number of strata at 10, following the heuristic discussed in the homework.  
-#' 
-#' Note that the true effect is `mean(W * X[,2])`.  
+#' Note that the true effect is   
+n = 1000; p = 20
+X = matrix(rnorm(n * p), n, p)
+Y1 = pmax(X[,1] + X[,2], 0)
+Y0 = pmax(X[,1], 0)
+mean(Y1 - Y0)
 #+ echo=TRUE
 
 propensity_stratification <- function(df, treatment_model, n_strata = 10, 
@@ -1076,26 +1084,41 @@ make_simulation <- function(){
 # propensity_stratification(df, sim_pW_logistic.fit)
 
 #' We now run `r n_sims` simulations of the type described above, and report results over each simulation.  
+#' We also run these simulations for different number of strata
 #' We see that propensity stratification and IPW perform similarly, but propensity stratification has lower average MSE.  
+#' For 1 stratum, we exactly track the difference in means estimator
+#' As we increase the number of strata, we start approaching the ipw estimator. Bias falls.
+#' We settle on 10 as the ideal number of strata. The reason is that it provides ATE with the least bias.
+#' At a high level, having too many strata increases the amount of noise with a fixed number of points, so we start at
+#' 1 and reach an optimum
 #+ echo=FALSE
 
-sim_storage <- data.table()
-for (i in 1:n_sims){
-  df <- make_simulation()
+nstratas <- c(1, 2, 5, 10, 20, 50)
+for (nstrata in nstratas) {
+  sim_storage <- data.table()
+  for (i in 1:n_sims){
+    df <- make_simulation()
+    Y1 = pmax(df$V1 + df$V2, 0)
+    Y0 = pmax(df$V1, 0)
+    true_tau = mean(Y1 - Y0)
+    
+    sim_pW_logistic.fit <- glm(W ~ ., data = df %>% select(-Y), family = "binomial")
+    sim_pW_logistic <- predict(sim_pW_logistic.fit, type = "response")
+    
+    tau_ests <- rbind(
+      c(true_tau, NA, NA),
+      difference_in_means(df),
+      ipw(df, sim_pW_logistic),
+      propensity_stratification(df, sim_pW_logistic.fit, n_strata=nstrata)  
+    ) %>% as.data.frame()
+    
+    tau_ests$sim_num <- i
+    tau_ests$est <- c("true", "difference_in_means", "ipw", "propensity_stratification")
+    sim_storage <- rbindlist(list(sim_storage, tau_ests), fill = TRUE)
+  }
   
-  sim_pW_logistic.fit <- glm(W ~ ., data = df %>% select(-Y), family = "binomial")
-  sim_pW_logistic <- predict(sim_pW_logistic.fit, type = "response")
-  
-  tau_ests <- rbind(
-    c(df[,mean(W * V2)], NA, NA),
-    difference_in_means(df),
-    ipw(df, sim_pW_logistic),
-    propensity_stratification(df, sim_pW_logistic.fit)  
-  ) %>% as.data.frame()
-  
-  tau_ests$sim_num <- i
-  tau_ests$est <- c("true", "difference_in_means", "ipw", "propensity_stratification")
-  sim_storage <- rbindlist(list(sim_storage, tau_ests), fill = TRUE)
+  plt <- ggplot(sim_storage, aes(x = sim_num, y = ATE, color = est)) + geom_line() +
+    ggtitle(sprintf("Number of Strata = %d", nstrata))
+  print(plt)
+    
 }
-
-ggplot(sim_storage, aes(x = sim_num, y = ATE, color = est)) + geom_line()
