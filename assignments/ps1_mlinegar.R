@@ -918,7 +918,13 @@ print(round(as.matrix(all_estimators.int), 3))
 #' 
 #' We fix the number of strata at 10, following the heuristic discussed in the homework.  
 #' 
-#' Note that the true effect is `mean(W * X[,2])`.  
+#' Note that the true effect is:
+#+ eval=FALSE, include=TRUE 
+n = 1000; p = 20
+X = matrix(rnorm(n * p), n, p)
+Y1 = pmax(X[,1] + X[,2], 0)
+Y0 = pmax(X[,1], 0)
+mean(Y1 - Y0)
 #+ echo=TRUE
 
 propensity_stratification <- function(df, treatment_model, n_strata = 10, 
@@ -979,30 +985,41 @@ make_simulation <- function(){
 # ipw(df, sim_pW_logistic)
 # propensity_stratification(df, sim_pW_logistic.fit)
 
-#' We now run `r n_sims` simulations of the type described above, and report results over each simulation.  
-#' We see that propensity stratification and IPW perform similarly, but IPW has lower average MSE.  
+#' We now run `r n_sims` simulations of the type described above for each number of strata, 
+#' and report results over each simulation.  
+#' We see that propensity stratification and IPW perform similarly, but propensity stratification has lower average MSE.  
+#' We settle on 10 strata, as it minimizes bias.  
 #+ echo=TRUE
-
-sim_storage <- data.table()
-for (i in 1:n_sims){
-  df <- make_simulation()
+nstratas <- c(1, 2, 5, 10, 20, 50)
+for (nstrata in nstratas) {
+  sim_storage <- data.table()
+  for (i in 1:n_sims){
+    df <- make_simulation()
+    Y1 = pmax(df$V1 + df$V2, 0)
+    Y0 = pmax(df$V1, 0)
+    true_tau = mean(Y1 - Y0)
+    
+    sim_pW_logistic.fit <- glm(W ~ ., data = df %>% select(-Y), family = "binomial")
+    sim_pW_logistic <- predict(sim_pW_logistic.fit, type = "response")
+    
+    tau_ests <- rbind(
+      c(true_tau, NA, NA),
+      difference_in_means(df),
+      ipw(df, sim_pW_logistic),
+      propensity_stratification(df, sim_pW_logistic.fit, n_strata=nstrata)  
+    ) %>% as.data.frame()
+    
+    tau_ests$sim_num <- i
+    tau_ests$est <- c("true", "difference_in_means", "ipw", "propensity_stratification")
+    sim_storage <- rbindlist(list(sim_storage, tau_ests), fill = TRUE)
+  }
   
-  sim_pW_logistic.fit <- glm(W ~ ., data = df %>% select(-Y), family = "binomial")
-  sim_pW_logistic <- predict(sim_pW_logistic.fit, type = "response")
+  plt <- ggplot(sim_storage, aes(x = sim_num, y = ATE, color = est)) + geom_line() +
+    ggtitle(sprintf("Number of Strata = %d", nstrata))
+  print(plt)
   
-  tau_ests <- rbind(
-    c(df[,mean(W * V2)], NA, NA),
-    difference_in_means(df),
-    ipw(df, sim_pW_logistic),
-    propensity_stratification(df, sim_pW_logistic.fit)  
-  ) %>% as.data.frame()
-  
-  tau_ests$sim_num <- i
-  tau_ests$est <- c("true", "difference_in_means", "ipw", "propensity_stratification")
-  sim_storage <- rbindlist(list(sim_storage, tau_ests), fill = TRUE)
 }
-
-ggplot(sim_storage, aes(x = sim_num, y = ATE, color = est)) + geom_line()
+# ggplot(sim_storage, aes(x = sim_num, y = ATE, color = est)) + geom_line()
 
 ##### COPY OF OTHER FUNCTIONS ####
 #' # APPENDIX: Additional Functions Used  
