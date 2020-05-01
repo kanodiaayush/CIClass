@@ -279,16 +279,18 @@ if (dataset_name == "social") {
 }
 
 #### SETUP TEXT ####
-#' # Part One
-#' This problem set examines the `r dataset_name` data set. Throughout, the treatment variable will be referred to as `r toupper(treatment_variable_name)` and the outcome variable will be referred to as `r toupper(outcome_variable_name)`.  
+#' # Part One  
+#' This problem set examines the `r dataset_name` data set. Throughout, the treatment variable will be referred to as `r toupper(treatment_variable_name)` and the outcome variable will be referred to as `r toupper(outcome_variable_name)`.   
+#' Note that models with the suffix `.int` refer to our interacted data; we work with this expanded dataset to demonstrate the usefulness of machine learning methods in higher dimensions.  
+
 #' ## Collaborators
-#' I worked closely on this problem set with Ayush Kanodia. I also worked with Kaleb Javier Pena and Haviland Sheldahl-Thomason, and indicate where we collaborated on code.   
+#' I worked closely on this problem set with Ayush Kanodia. I also worked with Kaleb Javier and Haviland Sheldahl-Thomason, and indicate where we collaborated on code.   
 
 #### DATA WORK ####
 # follows tutorial exactly
 #' ## Pre-Processing the Data
 #' I use code from a set of AtheyLab tutorials, which include the following note:  
-#' > The datasets in our [github webpage](https://github.com/gsbDBI/ExperimentData/) have been prepared for analysis so they will not require a lot of cleaning and manipulation, but let's do some minimal housekeeping. First, we will drop the columns that aren't outcomes, treatments or (pre-treatment) covariates, since we won't be using those.
+#'      > The datasets in our [github webpage](https://github.com/gsbDBI/ExperimentData/) have been prepared for analysis so they will not require a lot of cleaning and manipulation, but let's do some minimal housekeeping. First, we will drop the columns that aren't outcomes, treatments or (pre-treatment) covariates, since we won't be using those.
 #' Specifically, we keep only a subset of predictors and drop observations with missing information.  
 all_variables_names <- c(outcome_variable_name, treatment_variable_name, covariate_names)
 df <- df[, which(names(df) %in% all_variables_names)]
@@ -320,6 +322,7 @@ Wmod = df_mod$W
 #' \newpage
 #' As a first step, we plot logistic predictions of the probabilities our treatment $pW$ and our outcome $pY$. 
 #' We see that treatment assignment appears to follow a normal distribution, and that our outcome has an average unconditional probability of  `r mean(Ymod)`.  
+#+ echo=TRUE
 pW_logistic.fit <- glm(Wmod ~ as.matrix(Xmod), family = "binomial")
 pW_logistic <- predict(pW_logistic.fit, type = "response")
 pW_logistic.fit.tidy <-  pW_logistic.fit %>% tidy()
@@ -336,13 +339,14 @@ df_mod[, `:=`(p_Y = pY_logistic,
 #' We now produce a plot comparing predicted and actual treatment assignment. 
 #' This plot is provided mostly for comparison (this is the plot the tutorial has);
 #' future plots of this nature will be done with `ggplot` to make their options more explicit.  
-#+ echo=FALSE
+#+ echo=TRUE
 {plot(smooth.spline(pW_logistic, Wmod, df = 4))
   abline(0, 1)}
 
 #### RCT ANALYSIS ####
 #' ## RCT Analysis
 #' We now report the (presumably true) treatment effect $\hat{\tau}$ from the randomized experiment:  
+#+ echo=TRUE
 tauhat_rct <- difference_in_means(df)
 print(tauhat_rct)
 
@@ -414,6 +418,7 @@ tauhat_lin_logistic_aipw <- aipw_ols(df_mod, pW_logistic)
 # tauhat_lin_logistic_aipw 
 
 #### LOGISTIC PROPENSITY SCORES ####
+#+ echo=TRUE
 # df_mod <- copy(df)
 Xmod = df_mod[,.SD, .SDcols = names(df_mod)[!names(df_mod) %in% c("Y", "W")]] %>% as.matrix()
 Ymod = df_mod$Y
@@ -424,14 +429,13 @@ XWmod = cbind(Xmod, Wmod)
 pW_logistic.fit <- glm(Wmod ~ as.matrix(Xmod), family = "binomial")
 pW_logistic <- predict(pW_logistic.fit, type = "response")
 
-# hist(pW_logistic)
-
 df_mod[, logistic_propensity := pW_logistic]
 
 #### OVERLAP ####
 #' We now plot (logistic) propensity scores, showing that we still have overlap after removing observations. 
 #' We may be somewhat concerned about the small number of observations with propensities close to one;
 #' however, they are small in number and not exactly one so we are leaving them in for now.  
+#+ echo=TRUE
 overlap <- df_mod %>% ggplot(aes(x=logistic_propensity,color=as.factor(W),fill=as.factor(W)))+ geom_histogram()
 overlap
 
@@ -514,7 +518,7 @@ pY_rf.int = predict(pY_rf.fit.int, newdata = Xmod.int) %>% as.matrix
 #' Next we plot the bias function $b(X)$ following Athey, Imbens, Pham and Wager (AER P&P, 2017, Section IIID). 
 #' We plot $b(x)$ for all units in the sample, and see that the bias seems evenly distributed around zero.  
 #' We see that bias for most observations is close to zero.  
-#+ echo=FALSE
+#+ echo=TRUE
 
 mu_avg <- function(treated, df){df[W==treated, mean(Y)]}
 mu <- function(treated, df){df[W==treated, mean(pY)]}
@@ -524,8 +528,7 @@ B <- function(df, treatment_model, outcome_model, outcome_type = "response"){
   # note that this will NOT work for lasso model, attempt to warn of this misbehavior:
   if (grepl("lasso|rf|cf", deparse(quote(treatment_model)))){
     simpleMessage("The predict method appears to be broken for lasso models estimated using glmnet::cv.glmnet.
-                  You may want to try another predictive model. 
-                  I am unclear how predict works using predict.causal_forest, and so currently do not recommend it.")
+                  You may want to try another predictive model.")
   }
   df = copy(df)
   p = df[,mean(W)]
@@ -576,15 +579,13 @@ plot_prob(pW_rf.int, Wmod, "Random Forest", "Expanded")
 #' ## Exploring the Lasso Model Along Lambda
 #' To show how cross-validating lambda is important for the lasso, we compare predicted and actual treatment status for the minimum, maximum, a randomly selected lambda. 
 #' The lasso with the best lamda is the one closest to the 45-degree line. 
-#+ echo = FALSE
+#+ echo=TRUE
 plot_prob(pW_lasso.int.min, Wmod, "Lasso with Min Lambda", "Expanded")
 plot_prob(pW_lasso.int.max, Wmod, "Lasso with Max Lambda", "Expanded")
 plot_prob(pW_lasso.int.rand, Wmod, "Lasso with Random Lambda", "Expanded")
 
-# {plot(smooth.spline(pW_logistic, Wmod, df = 4))
-#   abline(0, 1)}
-
 #' We also plot our various estimates of $\hat{\tau}$ over our lambdas.
+#+ echo=TRUE
 # plot lasso over grid of lambdas
 pW_glmnet.fit.propensity.int.lambda_preds <- as.data.table(pW_glmnet.fit.propensity.int$fit.preval)
 pW_glmnet.fit.propensity.int.lambda_preds <- pW_glmnet.fit.propensity.int.lambda_preds[
@@ -625,7 +626,9 @@ ggplot(tauhat_lasso_estimates.lambdas, aes(x = lambda, y = ATE, color = model)) 
   coord_cartesian(ylim = c(tauhat_rct["lower_ci"], tauhat_rct["upper_ci"])) + 
   ggtitle("Tauhat estimates over Lambdas, zoomed in more")
 
-# likelihoods over lambdas
+
+#' We now plot log likelihood over different values of lambda on the expanded data.  
+#+ echo=TRUE
 lambda_log_liks <- pW_glmnet.fit.propensity.int.lambda_preds[
   ,lapply(.SD, loglike, Wmod), .SDcols = names(pW_glmnet.fit.propensity.int.lambda_preds)]
 
@@ -633,8 +636,6 @@ colnames(lambda_log_liks) <- as.character(pW_glmnet.fit.propensity.int$lambda)
 lambda_log_liks.long <- melt(lambda_log_liks, variable.name = "lambda", value.name = "llh")
 lambda_log_liks.long[, lambda := as.numeric(as.character(lambda))]
 
-#' We now plot log likelihood over different values of lambda on the expanded data.  
-#+ echo=FALSE
 ggplot(lambda_log_liks.long, aes(x = lambda, y = llh)) + 
   geom_line() + 
   labs(title = "Log-Likelihood over Lambdas for Predicting W")
@@ -648,8 +649,7 @@ ggplot(lambda_log_liks.long, aes(x = lambda, y = llh)) +
 #' \newpage
 #' ## Exploring Random Forest Performance with Sample Size
 #' To show how sample size is is important for random forest performance, we compare ATE estimates across sample size.
-
-# RF
+#+ echo=TRUE
 ate_rf_aipw.int = average_treatment_effect(cf.int)
 tauhat_rf_aipw.int = c(ATE=ate_rf_aipw.int["estimate"],
                        lower_ci=ate_rf_aipw.int["estimate"] - 1.96 * ate_rf_aipw.int["std.err"],
@@ -660,7 +660,8 @@ tauhat_ols_rf_aipw.int = aipw_ols(df_mod.int, pW_rf.int)
 tauhat_rf_ipw.int
 tauhat_ols_rf_aipw.int
 
-
+#' We now repeat this analysis over different sample sizes.
+#+ echo=TRUE
 tauhat_rf_list <- data.frame()
 tauhat_ols_rf_aipw_list <- data.frame()
 for (prob_temp in prop_drop_rf) {
@@ -944,7 +945,7 @@ make_simulation <- function(){
 
 #' We now run `r n_sims` simulations of the type described above, and report results over each simulation.  
 #' We see that propensity stratification and IPW perform similarly, but propensity stratification has lower average MSE.  
-#+ echo=FALSE
+#+ echo=TRUE
 
 sim_storage <- data.table()
 for (i in 1:n_sims){
@@ -966,3 +967,31 @@ for (i in 1:n_sims){
 }
 
 ggplot(sim_storage, aes(x = sim_num, y = ATE, color = est)) + geom_line()
+
+##### COPY OF OTHER FUNCTIONS ####
+#' # APPENDIX: ADDITIONAL FUNCTIONS USED
+#' In this section, we include a number of other functions necessary to run this code. We do not include any functions defined in any of the tutorials. 
+#+ echo=TRUE
+plot_prob <- function(prob, pred, model_name = "", data_name = ""){
+  model = deparse(quote(Wmod)) %>% substr(0,1)
+  stopifnot(model %in% c("W", "Y"))
+  data_text = ifelse(data_name=="","", sprintf(", with %s data", data_name))
+  ggplot(data.frame(prob, pred), aes(x = prob, y = pred)) + 
+    geom_point(alpha = .01) +
+    # geom_smooth() + 
+    geom_smooth(method = lm, formula = y ~ splines::bs(x, 4), se = TRUE) + 
+    geom_abline(intercept = 0, slope = 1) + 
+    labs(title = sprintf("Predicted %s Propensity vs Actual %s%s", model_name, model, data_text),
+         x = sprintf("Predicted %s", model),
+         y = sprintf("Observed %s", model)) + 
+    xlim(0,1) + 
+    ylim(0,1)
+}
+
+convert_to_prob <- function(x){
+  1/(1 + exp(-x))
+}
+
+loglike <- function(pred, data){
+  mean(data * log(pred) + (1 - data) * log(1 - pred))
+}
