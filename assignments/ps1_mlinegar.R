@@ -25,6 +25,8 @@ prop_to_keep <- 1.0 # if you want to only run on a random sample of the data, if
 lambda <- c(0.0001, 0.001, 0.01, 0.1, 0.3, 0.5, 0.7, 1, 5, 10, 50, 100, 1000)
 prop_drop_rf <- c(0.01, 0.02, 0.04, 0.1, 0.2, 0.3, 0.4, .5, .7, .8, .9)
 
+propensity_bound <- c(0.01, 0.99)
+
 library(here)
 # devtools::install_github("hrbrmstr/hrbrthemes")
 # library(hrbrthemes)
@@ -37,6 +39,7 @@ library(grf)
 library(sandwich)
 devtools::install_github("swager/amlinear") # install amlinear package
 library(amlinear)
+library(stargazer)
 
 #### KNITR SETUP ####
 #+ setup, include=FALSE
@@ -321,7 +324,7 @@ Ymod = df_mod$Y
 Wmod = df_mod$W
 
 #' \newpage
-#' As a first step, we plot logistic predictions of the probabilities our treatment $pW$ and our outcome $pY$. 
+#' As a first step, we plot logistic predictions of the probabilities our treatment $pW$ and our outcome $pY$ (which is binary). 
 #' We see that treatment assignment appears to follow a normal distribution, and that our outcome has an average unconditional probability of  `r mean(Ymod)`.  
 #+ echo=TRUE
 pW_logistic.fit <- glm(Wmod ~ as.matrix(Xmod), family = "binomial")
@@ -336,6 +339,10 @@ hist(pY_logistic)
 
 df_mod[, `:=`(p_Y = pY_logistic,
               p_W = pW_logistic)]
+
+#' Some summary statistics of our data:
+#+ results='asis'
+stargazer(df_mod, header=FALSE)
 
 #' We now produce a plot comparing predicted and actual treatment assignment. 
 #' This plot is provided mostly for comparison (this is the plot the tutorial has);
@@ -371,6 +378,7 @@ prob_treatment = prob
       # - More than slightly conservative (`polviews >= 5.5 & polviews < 8`)
       # - with self-reported prestige of occuption above the bottom quartile (`prestg80 >= 34`)
 #' We remove `r prob * 100` percent of observations in these sets. 
+#' We picked our rule by using a tree to pick covariates highly correlated with the outcome, so that we could drop high outcomes and low outcome groups from treatment and control to confound results.  
 #+ include=FALSE
 setDT(df)
 # college_educ_lib_dems = df[, partyid < 3 & reg16 <= 16 & degree <=1] #  & df$educ >= 16 & df$polviews < 3.5
@@ -435,8 +443,22 @@ df_mod[, logistic_propensity := pW_logistic]
 #### OVERLAP ####
 #' We now plot (logistic) propensity scores, showing that we still have overlap after removing observations. 
 #' We may be somewhat concerned about the small number of observations with propensities close to one;
-#' however, they are small in number and not exactly one so we are leaving them in for now.  
+#' so remove all observations with propensity score outside of `r propensity_bound[1]` and `r propensity_bound[2]` to fix this. 
+#' We then re-estimate the propensity model.  
+#' We first show overlap before truncating.  
 #+ echo=TRUE
+overlap <- df_mod %>% ggplot(aes(x=logistic_propensity,color=as.factor(W),fill=as.factor(W)))+ geom_histogram()
+overlap
+
+#' We now truncate, and plot truncated overlap. 
+#+ echo=TRUE
+df_mod <- df_mod[logistic_propensity %between% propensity_bound]
+
+Xmod = df_mod[,.SD, .SDcols = names(df_mod)[!names(df_mod) %in% c("Y", "W")]] %>% as.matrix()
+Ymod = df_mod$Y
+Wmod = df_mod$W
+XWmod = cbind(Xmod, Wmod)
+
 overlap <- df_mod %>% ggplot(aes(x=logistic_propensity,color=as.factor(W),fill=as.factor(W)))+ geom_histogram()
 overlap
 
@@ -567,9 +589,9 @@ ggplot(df_mod_bias, aes(x = b)) + geom_histogram() + labs(title = "Histogram of 
 
 #### PLOTTING PROPENSITY PERFORMANCE ####
 #' \newpage
-#' We first plot propensity scores against treatment status on the original and expanded set of coefficients. 
+#' We first plot propensity scores against actual treatment status on the original and expanded set of coefficients to examine model performance. 
 #' Models closer to the 45-degree line are better.  
-#' We see that logistic propensity scores perform surprisingly well! 
+#' We see that logistic and lasso propensity scores perform the best on the original and interacted data.  
 #+ echo = FALSE
 
 plot_prob(pW_logistic, Wmod, "Logistic")
@@ -583,13 +605,15 @@ plot_prob(pW_rf.int, Wmod, "Random Forest", "Expanded")
 #' \newpage
 #' ## Exploring the Lasso Model Along Lambda
 #' To show how cross-validating lambda is important for the lasso, we compare predicted and actual treatment status for the minimum, maximum, a randomly selected lambda. 
-#' The lasso with the best lamda is the one closest to the 45-degree line. 
+#' The lasso with the best lambda from cross-validation is the one closest to the 45-degree line. 
 #+ echo=TRUE
 plot_prob(pW_lasso.int.min, Wmod, "Lasso with Min Lambda", "Expanded")
 plot_prob(pW_lasso.int.max, Wmod, "Lasso with Max Lambda", "Expanded")
 plot_prob(pW_lasso.int.rand, Wmod, "Lasso with Random Lambda", "Expanded")
 
-#' We also plot our various estimates of $\hat{\tau}$ over our lambdas.
+#' We also plot our various estimates of $\hat{\tau}$ over our lambdas on the expanded data. 
+#' We see that IPW and OLS with propensity score models perform better when their lambdas have higher log-likelihood. 
+#' We ran into problems with the `predict` function and the glmnet model, hence we are lacking a few lasso-based models.  
 #+ echo=TRUE
 # plot lasso over grid of lambdas
 pW_glmnet.fit.model.int.lambda_preds <- as.data.table(pW_glmnet.fit.model.int$fit.preval)
@@ -637,6 +661,10 @@ ggplot(tauhat_lasso_estimates.lambdas, aes(x = lambda, y = ATE, color = model)) 
   coord_cartesian(ylim = c(tauhat_rct["lower_ci"], tauhat_rct["upper_ci"])) + 
   ggtitle("Tauhat estimates over Lambdas, zoomed in more")
 
+#' As we vary lambdas our IPW and OLS with propensity score weighting models start getting unstable.
+#' The model is likely misspecified with extreme values of lambdas, driving incorrect estimates of treatment effects. 
+#' On the other hand, AIPW is a doubly robust method, and the outcome model is correctly specified (it is simply OLS),
+#' hence our estimates of using AIPW are robust to choice of lambda.   
 
 #' We now plot log likelihood over different values of lambda on the expanded data.  
 #+ echo=TRUE
