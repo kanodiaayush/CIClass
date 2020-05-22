@@ -941,3 +941,74 @@ gt(estimates,rowname_col = "row_names")  %>%
   cols_label(V2 = "df_est",
              V3 = "df_test",
              V4 = "df_tr")
+
+#' ### Partial Dependence Plots
+
+
+#### Partial dependence plots
+
+#' Directly from tutorial:
+#' 
+#' It may also be interesting to examine how our CATE estimates behave when we change a single covariate, while keeping all the other covariates at a some fixed value. In the plot below we evaluate a variable of interest across quantiles, while keeping all other covariates at their median (see the RMarkdown source for code).  
+
+
+#' **Note:** It is important to recognize that in the following plots and tables, we may be evaluating the CATE at $x$ values in regions where there are few or no data points. Also, it may be the case that varying some particular variable while keeping others fixed may just not be very interesting. For example, in the _welfare_ dataset, we will not see a lot difference when we change `partyid` if we keep `polviews` fixed at their median value. It might be instructive to re-run this tutorial without using the variable `partyid`.
+
+#+ select_continuous_variables_for_var_of_interest, echo = FALSE
+if (dataset_name == "welfare") {
+  var_of_interest = "polviews"
+  vars_of_interest = c("income", "polviews")
+} else {
+  # Selecting a continuous variable, if available, to make for a more interesting graph
+  continuous_variables <- sapply(covariate_names, function(x) length(unique(df_train[, x])) > 5)
+  
+  # Select variable for single variable plot
+  var_of_interest <- ifelse(sum(continuous_variables) > 0,
+                            covariate_names[continuous_variables][1],
+                            covariate_names[1])
+  
+  # Select variables for two variable plot
+  vars_of_interest <- c(var_of_interest,
+                        ifelse(sum(continuous_variables) > 1,
+                               covariate_names[continuous_variables][2],
+                               covariate_names[covariate_names != var_of_interest][1]))
+}
+```
+
+
+```{r causal_forest_single_variable_plot_prepare, echo=FALSE}
+# Create a grid of values: if continuous, quantiles; else, plot the actual values
+is_continuous <- (length(unique(df_train[,var_of_interest])) > 5) # crude rule for determining continuity
+if(is_continuous) {
+  x_grid <- quantile(df_train[,var_of_interest], probs = seq(0, 1, length.out = 5))
+} else {
+  x_grid <- sort(unique(df_train[,var_of_interest]))
+}
+df_grid <- setNames(data.frame(x_grid), var_of_interest)
+# For the other variables, keep them at their median
+other_covariates <- covariate_names[which(covariate_names != var_of_interest)]
+df_median <- data.frame(lapply(df_train[,other_covariates], median))
+df_eval <- crossing(df_median, df_grid)
+# Predict the treatment effect
+pred <- predict(cf, newdata=df_eval[,covariate_names], estimate.variance=TRUE)
+df_eval$tauhat <- pred$predictions
+df_eval$se <- sqrt(pred$variance.estimates)
+```
+
+```{r causal_forest_single_variable_plot, echo=FALSE, results='as_is', fig.height=4}
+# Change to factor so the plotted values are evenly spaced
+df_eval[, var_of_interest] <- as.factor(round(df_eval[, var_of_interest], digits = 4))
+# Descriptive labeling
+label_description <- ifelse(is_continuous, '\n(Evaluated at quintiles)', '')
+# Plot
+df_eval %>%
+  mutate(ymin_val = tauhat-1.96*se) %>%
+  mutate(ymax_val = tauhat+1.96*se) %>%
+  ggplot() +
+  geom_line(aes_string(x=var_of_interest, y="tauhat", group = 1), color="red") +
+  geom_errorbar(aes_string(x=var_of_interest,ymin="ymin_val", ymax="ymax_val", width=.2),color="blue") +
+  xlab(paste0("Effect of ", var_of_interest, label_description)) +
+  ylab("Predicted Treatment Effect") +
+  theme_linedraw() +
+  theme(axis.ticks = element_blank())
+```
