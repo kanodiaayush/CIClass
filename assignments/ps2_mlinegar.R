@@ -1336,3 +1336,4 @@ df_eval %>%
   theme(axis.ticks = element_blank())
 
 df_eval[,c(var_of_interest,"tauhat","se")] %>% gt()
+
