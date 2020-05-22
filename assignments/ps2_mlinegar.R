@@ -814,8 +814,8 @@ kable_styling(kable(mse_summary_1,  "html", digits = 5,
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
 
-#+ echo=TRUE
-rloss_long <- mse %>% pivot_longer(cols = everything())
+#+ echo=true
+rloss_long <- mse_1 %>% pivot_longer(cols = everything())
 
 ggplot(rloss_long,aes(x=value)) + 
   geom_histogram() + 
@@ -840,8 +840,8 @@ kable_styling(kable(mse_summary_2,  "html", digits = 5,
                     caption="Estimate loss: comparison across methods"),
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
-#+ echo=TRUE
-rloss_long <- mse %>% pivot_longer(cols = everything())
+#+ echo=true
+rloss_long <- mse_2 %>% pivot_longer(cols = everything())
 
 ggplot(rloss_long,aes(x=value)) + 
   geom_histogram() + 
@@ -870,8 +870,8 @@ kable_styling(kable(mse_summary_3,  "html", digits = 5,
                     caption="Estimate loss: comparison across methods"),
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
-#+ echo=TRUE
-rloss_long <- mse %>% pivot_longer(cols = everything())
+#+ echo=true
+rloss_long <- mse_3 %>% pivot_longer(cols = everything())
 
 ggplot(rloss_long,aes(x=value)) + 
   geom_histogram() + 
@@ -897,8 +897,8 @@ kable_styling(kable(mse_summary_4,  "html", digits = 5,
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
 
-#+ echo=TRUE
-rloss_long <- mse %>% pivot_longer(cols = everything())
+#+ echo=true
+rloss_long <- mse_4 %>% pivot_longer(cols = everything())
 
 ggplot(rloss_long,aes(x=value)) + 
   geom_histogram() + 
