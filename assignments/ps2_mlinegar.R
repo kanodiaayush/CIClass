@@ -566,7 +566,7 @@ df_qtile_storage[,lapply(.SD, mean), .(ntile)]
 #+ echo=TRUE
 taufn = function(x) { 1 / (1 + exp(-x[2]/2)) }
 
-#+ echo=false
+#+ echo=FALSE
 
 # save things across sims
 cf_cor_storage <- data.table()
