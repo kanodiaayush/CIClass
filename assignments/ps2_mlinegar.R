@@ -954,50 +954,111 @@ gt(estimates,rowname_col = "row_names")  %>%
 
 #' **Note:** It is important to recognize that in the following plots and tables, we may be evaluating the CATE at $x$ values in regions where there are few or no data points. Also, it may be the case that varying some particular variable while keeping others fixed may just not be very interesting. For example, in the _welfare_ dataset, we will not see a lot difference when we change `partyid` if we keep `polviews` fixed at their median value. It might be instructive to re-run this tutorial without using the variable `partyid`.
 
-#+ select_continuous_variables_for_var_of_interest, echo = FALSE
+
+
+#### 90% ####
+#' First 90% of the data
+df_90 <- df %>% sample_frac(.90)
+df_tr <- df_90 %>% sample_frac(.40)
+df_split  <- anti_join(df, df_tr, by = 'id')
+cf <- causal_forest(
+  X = as.matrix(df_tr[,covariate_names]),
+  Y = df_tr$Y,
+  W = df_tr$W,
+  num.trees=200) 
 if (dataset_name == "welfare") {
-  var_of_interest = "polviews"
-  vars_of_interest = c("income", "polviews")
+  var_of_interest = "age"
 } else {
   # Selecting a continuous variable, if available, to make for a more interesting graph
-  continuous_variables <- sapply(covariate_names, function(x) length(unique(df_train[, x])) > 5)
-  
+  continuous_variables <- sapply(covariate_names, function(x) length(unique(df_tr[, x])) > 5)
   # Select variable for single variable plot
   var_of_interest <- ifelse(sum(continuous_variables) > 0,
                             covariate_names[continuous_variables][1],
                             covariate_names[1])
-  
   # Select variables for two variable plot
   vars_of_interest <- c(var_of_interest,
                         ifelse(sum(continuous_variables) > 1,
                                covariate_names[continuous_variables][2],
                                covariate_names[covariate_names != var_of_interest][1]))
 }
-
-#+ causal_forest_single_variable_plot_prepare, echo=FALSE
 # Create a grid of values: if continuous, quantiles; else, plot the actual values
-is_continuous <- (length(unique(df_train[,var_of_interest])) > 5) # crude rule for determining continuity
+is_continuous <- (length(unique(df_tr[,var_of_interest])) > 5) # crude rule for determining continuity
 if(is_continuous) {
-  x_grid <- quantile(df_train[,var_of_interest], probs = seq(0, 1, length.out = 5))
+  x_grid <- quantile(df_tr[,var_of_interest], probs = seq(0, 1, length.out = 5))
 } else {
-  x_grid <- sort(unique(df_train[,var_of_interest]))
+  x_grid <- sort(unique(df_tr[,var_of_interest]))
 }
 df_grid <- setNames(data.frame(x_grid), var_of_interest)
 # For the other variables, keep them at their median
 other_covariates <- covariate_names[which(covariate_names != var_of_interest)]
-df_median <- data.frame(lapply(df_train[,other_covariates], median))
+df_median <- data.frame(lapply(df_tr[,other_covariates], median))
 df_eval <- crossing(df_median, df_grid)
 # Predict the treatment effect
 pred <- predict(cf, newdata=df_eval[,covariate_names], estimate.variance=TRUE)
 df_eval$tauhat <- pred$predictions
 df_eval$se <- sqrt(pred$variance.estimates)
-
-causal_forest_single_variable_plot, echo=FALSE, results='as_is', fig.height=4
 # Change to factor so the plotted values are evenly spaced
-df_eval[, var_of_interest] <- as.factor(round(df_eval[, var_of_interest], digits = 4))
+df_eval[, var_of_interest] <- as.factor(round(df_grid[, var_of_interest], digits = 4))
 # Descriptive labeling
 label_description <- ifelse(is_continuous, '\n(Evaluated at quintiles)', '')
+
+#' Now we plot
+#+
 # Plot
+df_eval %>%
+  mutate(ymin_val = tauhat-1.96*se) %>%
+  mutate(ymax_val = tauhat+1.96*se) %>%
+  ggplot() +
+  geom_line(aes_string(x=var_of_interest, y="tauhat",group=1), color="red") +
+  geom_errorbar(aes_string(x=var_of_interest,ymin="ymin_val", ymax="ymax_val", width=.2),color="blue") +
+  xlab(paste0("Effect of ", var_of_interest, label_description)) +
+  ylab("Predicted Treatment Effect") +
+  theme_linedraw() +
+  theme(axis.ticks = element_blank())
+
+
+df_eval[,c(var_of_interest,"tauhat","se")] %>% gt()
+
+#' Now for another variable:
+#+
+if (dataset_name == "welfare") {
+  var_of_interest = "hrs1"
+} else {
+  # Selecting a continuous variable, if available, to make for a more interesting graph
+  continuous_variables <- sapply(covariate_names, function(x) length(unique(df_tr[, x])) > 5)
+  # Select variable for single variable plot
+  var_of_interest <- ifelse(sum(continuous_variables) > 0,
+                            covariate_names[continuous_variables][1],
+                            covariate_names[1])
+  # Select variables for two variable plot
+  vars_of_interest <- c(var_of_interest,
+                        ifelse(sum(continuous_variables) > 1,
+                               covariate_names[continuous_variables][2],
+                               covariate_names[covariate_names != var_of_interest][1]))
+}
+# Create a grid of values: if continuous, quantiles; else, plot the actual values
+is_continuous <- (length(unique(df_tr[,var_of_interest])) > 5) # crude rule for determining continuity
+if(is_continuous) {
+  x_grid <- quantile(df_tr[,var_of_interest], probs = seq(0, 1, length.out = 5))
+} else {
+  x_grid <- sort(unique(df_tr[,var_of_interest]))
+}
+df_grid <- setNames(data.frame(x_grid), var_of_interest)
+# For the other variables, keep them at their median
+other_covariates <- covariate_names[which(covariate_names != var_of_interest)]
+df_median <- data.frame(lapply(df_tr[,other_covariates], median))
+df_eval <- crossing(df_median, df_grid)
+# Predict the treatment effect
+pred <- predict(cf, newdata=df_eval[,covariate_names], estimate.variance=TRUE)
+df_eval$tauhat <- pred$predictions
+df_eval$se <- sqrt(pred$variance.estimates)
+# Change to factor so the plotted values are evenly spaced
+df_eval[, var_of_interest] <- as.factor(round(df_grid[, var_of_interest], digits = 4))
+# Descriptive labeling
+label_description <- ifelse(is_continuous, '\n(Evaluated at quintiles)', '')
+
+#' Plot
+#+
 df_eval %>%
   mutate(ymin_val = tauhat-1.96*se) %>%
   mutate(ymax_val = tauhat+1.96*se) %>%
@@ -1009,3 +1070,236 @@ df_eval %>%
   theme_linedraw() +
   theme(axis.ticks = element_blank())
 
+df_eval[,c(var_of_interest,"tauhat","se")] %>% gt()
+
+#### 70% ####
+#' Now 70% of the data
+df_70 <- df %>% sample_frac(.70)
+df_tr <- df_70 %>% sample_frac(.40)
+df_split  <- anti_join(df, df_tr, by = 'id')
+cf <- causal_forest(
+  X = as.matrix(df_tr[,covariate_names]),
+  Y = df_tr$Y,
+  W = df_tr$W,
+  num.trees=200) 
+if (dataset_name == "welfare") {
+  var_of_interest = "age"
+} else {
+  # Selecting a continuous variable, if available, to make for a more interesting graph
+  continuous_variables <- sapply(covariate_names, function(x) length(unique(df_tr[, x])) > 5)
+  # Select variable for single variable plot
+  var_of_interest <- ifelse(sum(continuous_variables) > 0,
+                            covariate_names[continuous_variables][1],
+                            covariate_names[1])
+  # Select variables for two variable plot
+  vars_of_interest <- c(var_of_interest,
+                        ifelse(sum(continuous_variables) > 1,
+                               covariate_names[continuous_variables][2],
+                               covariate_names[covariate_names != var_of_interest][1]))
+}
+# Create a grid of values: if continuous, quantiles; else, plot the actual values
+is_continuous <- (length(unique(df_tr[,var_of_interest])) > 5) # crude rule for determining continuity
+if(is_continuous) {
+  x_grid <- quantile(df_tr[,var_of_interest], probs = seq(0, 1, length.out = 5))
+} else {
+  x_grid <- sort(unique(df_tr[,var_of_interest]))
+}
+df_grid <- setNames(data.frame(x_grid), var_of_interest)
+# For the other variables, keep them at their median
+other_covariates <- covariate_names[which(covariate_names != var_of_interest)]
+df_median <- data.frame(lapply(df_tr[,other_covariates], median))
+df_eval <- crossing(df_median, df_grid)
+# Predict the treatment effect
+pred <- predict(cf, newdata=df_eval[,covariate_names], estimate.variance=TRUE)
+df_eval$tauhat <- pred$predictions
+df_eval$se <- sqrt(pred$variance.estimates)
+# Change to factor so the plotted values are evenly spaced
+df_eval[, var_of_interest] <- as.factor(round(df_grid[, var_of_interest], digits = 4))
+# Descriptive labeling
+label_description <- ifelse(is_continuous, '\n(Evaluated at quintiles)', '')
+
+#' Now we plot
+#+
+# Plot
+df_eval %>%
+  mutate(ymin_val = tauhat-1.96*se) %>%
+  mutate(ymax_val = tauhat+1.96*se) %>%
+  ggplot() +
+  geom_line(aes_string(x=var_of_interest, y="tauhat",group=1), color="red") +
+  geom_errorbar(aes_string(x=var_of_interest,ymin="ymin_val", ymax="ymax_val", width=.2),color="blue") +
+  xlab(paste0("Effect of ", var_of_interest, label_description)) +
+  ylab("Predicted Treatment Effect") +
+  theme_linedraw() +
+  theme(axis.ticks = element_blank())
+
+
+df_eval[,c(var_of_interest,"tauhat","se")] %>% gt()
+
+#' Now for another variable:
+#+
+if (dataset_name == "welfare") {
+  var_of_interest = "hrs1"
+} else {
+  # Selecting a continuous variable, if available, to make for a more interesting graph
+  continuous_variables <- sapply(covariate_names, function(x) length(unique(df_tr[, x])) > 5)
+  # Select variable for single variable plot
+  var_of_interest <- ifelse(sum(continuous_variables) > 0,
+                            covariate_names[continuous_variables][1],
+                            covariate_names[1])
+  # Select variables for two variable plot
+  vars_of_interest <- c(var_of_interest,
+                        ifelse(sum(continuous_variables) > 1,
+                               covariate_names[continuous_variables][2],
+                               covariate_names[covariate_names != var_of_interest][1]))
+}
+# Create a grid of values: if continuous, quantiles; else, plot the actual values
+is_continuous <- (length(unique(df_tr[,var_of_interest])) > 5) # crude rule for determining continuity
+if(is_continuous) {
+  x_grid <- quantile(df_tr[,var_of_interest], probs = seq(0, 1, length.out = 5))
+} else {
+  x_grid <- sort(unique(df_tr[,var_of_interest]))
+}
+df_grid <- setNames(data.frame(x_grid), var_of_interest)
+# For the other variables, keep them at their median
+other_covariates <- covariate_names[which(covariate_names != var_of_interest)]
+df_median <- data.frame(lapply(df_tr[,other_covariates], median))
+df_eval <- crossing(df_median, df_grid)
+# Predict the treatment effect
+pred <- predict(cf, newdata=df_eval[,covariate_names], estimate.variance=TRUE)
+df_eval$tauhat <- pred$predictions
+df_eval$se <- sqrt(pred$variance.estimates)
+# Change to factor so the plotted values are evenly spaced
+df_eval[, var_of_interest] <- as.factor(round(df_grid[, var_of_interest], digits = 4))
+# Descriptive labeling
+label_description <- ifelse(is_continuous, '\n(Evaluated at quintiles)', '')
+
+#' Plot
+#+
+df_eval %>%
+  mutate(ymin_val = tauhat-1.96*se) %>%
+  mutate(ymax_val = tauhat+1.96*se) %>%
+  ggplot() +
+  geom_line(aes_string(x=var_of_interest, y="tauhat", group = 1), color="red") +
+  geom_errorbar(aes_string(x=var_of_interest,ymin="ymin_val", ymax="ymax_val", width=.2),color="blue") +
+  xlab(paste0("Effect of ", var_of_interest, label_description)) +
+  ylab("Predicted Treatment Effect") +
+  theme_linedraw() +
+  theme(axis.ticks = element_blank())
+
+df_eval[,c(var_of_interest,"tauhat","se")] %>% gt()
+
+#### 50% ####
+#' Finally 50% of the data
+df_50 <- df %>% sample_frac(.50)
+df_tr <- df_50 %>% sample_frac(.40)
+df_split  <- anti_join(df, df_tr, by = 'id')
+cf <- causal_forest(
+  X = as.matrix(df_tr[,covariate_names]),
+  Y = df_tr$Y,
+  W = df_tr$W,
+  num.trees=200) 
+if (dataset_name == "welfare") {
+  var_of_interest = "age"
+} else {
+  # Selecting a continuous variable, if available, to make for a more interesting graph
+  continuous_variables <- sapply(covariate_names, function(x) length(unique(df_tr[, x])) > 5)
+  # Select variable for single variable plot
+  var_of_interest <- ifelse(sum(continuous_variables) > 0,
+                            covariate_names[continuous_variables][1],
+                            covariate_names[1])
+  # Select variables for two variable plot
+  vars_of_interest <- c(var_of_interest,
+                        ifelse(sum(continuous_variables) > 1,
+                               covariate_names[continuous_variables][2],
+                               covariate_names[covariate_names != var_of_interest][1]))
+}
+# Create a grid of values: if continuous, quantiles; else, plot the actual values
+is_continuous <- (length(unique(df_tr[,var_of_interest])) > 5) # crude rule for determining continuity
+if(is_continuous) {
+  x_grid <- quantile(df_tr[,var_of_interest], probs = seq(0, 1, length.out = 5))
+} else {
+  x_grid <- sort(unique(df_tr[,var_of_interest]))
+}
+df_grid <- setNames(data.frame(x_grid), var_of_interest)
+# For the other variables, keep them at their median
+other_covariates <- covariate_names[which(covariate_names != var_of_interest)]
+df_median <- data.frame(lapply(df_tr[,other_covariates], median))
+df_eval <- crossing(df_median, df_grid)
+# Predict the treatment effect
+pred <- predict(cf, newdata=df_eval[,covariate_names], estimate.variance=TRUE)
+df_eval$tauhat <- pred$predictions
+df_eval$se <- sqrt(pred$variance.estimates)
+# Change to factor so the plotted values are evenly spaced
+df_eval[, var_of_interest] <- as.factor(round(df_grid[, var_of_interest], digits = 4))
+# Descriptive labeling
+label_description <- ifelse(is_continuous, '\n(Evaluated at quintiles)', '')
+
+#' Now we plot
+#+
+# Plot
+df_eval %>%
+  mutate(ymin_val = tauhat-1.96*se) %>%
+  mutate(ymax_val = tauhat+1.96*se) %>%
+  ggplot() +
+  geom_line(aes_string(x=var_of_interest, y="tauhat",group=1), color="red") +
+  geom_errorbar(aes_string(x=var_of_interest,ymin="ymin_val", ymax="ymax_val", width=.2),color="blue") +
+  xlab(paste0("Effect of ", var_of_interest, label_description)) +
+  ylab("Predicted Treatment Effect") +
+  theme_linedraw() +
+  theme(axis.ticks = element_blank())
+
+
+df_eval[,c(var_of_interest,"tauhat","se")] %>% gt()
+
+#' Now for another variable:
+#+
+if (dataset_name == "welfare") {
+  var_of_interest = "hrs1"
+} else {
+  # Selecting a continuous variable, if available, to make for a more interesting graph
+  continuous_variables <- sapply(covariate_names, function(x) length(unique(df_tr[, x])) > 5)
+  # Select variable for single variable plot
+  var_of_interest <- ifelse(sum(continuous_variables) > 0,
+                            covariate_names[continuous_variables][1],
+                            covariate_names[1])
+  # Select variables for two variable plot
+  vars_of_interest <- c(var_of_interest,
+                        ifelse(sum(continuous_variables) > 1,
+                               covariate_names[continuous_variables][2],
+                               covariate_names[covariate_names != var_of_interest][1]))
+}
+# Create a grid of values: if continuous, quantiles; else, plot the actual values
+is_continuous <- (length(unique(df_tr[,var_of_interest])) > 5) # crude rule for determining continuity
+if(is_continuous) {
+  x_grid <- quantile(df_tr[,var_of_interest], probs = seq(0, 1, length.out = 5))
+} else {
+  x_grid <- sort(unique(df_tr[,var_of_interest]))
+}
+df_grid <- setNames(data.frame(x_grid), var_of_interest)
+# For the other variables, keep them at their median
+other_covariates <- covariate_names[which(covariate_names != var_of_interest)]
+df_median <- data.frame(lapply(df_tr[,other_covariates], median))
+df_eval <- crossing(df_median, df_grid)
+# Predict the treatment effect
+pred <- predict(cf, newdata=df_eval[,covariate_names], estimate.variance=TRUE)
+df_eval$tauhat <- pred$predictions
+df_eval$se <- sqrt(pred$variance.estimates)
+# Change to factor so the plotted values are evenly spaced
+df_eval[, var_of_interest] <- as.factor(round(df_grid[, var_of_interest], digits = 4))
+# Descriptive labeling
+label_description <- ifelse(is_continuous, '\n(Evaluated at quintiles)', '')
+
+#' Plot
+#+
+df_eval %>%
+  mutate(ymin_val = tauhat-1.96*se) %>%
+  mutate(ymax_val = tauhat+1.96*se) %>%
+  ggplot() +
+  geom_line(aes_string(x=var_of_interest, y="tauhat", group = 1), color="red") +
+  geom_errorbar(aes_string(x=var_of_interest,ymin="ymin_val", ymax="ymax_val", width=.2),color="blue") +
+  xlab(paste0("Effect of ", var_of_interest, label_description)) +
+  ylab("Predicted Treatment Effect") +
+  theme_linedraw() +
+  theme(axis.ticks = element_blank())
+
+df_eval[,c(var_of_interest,"tauhat","se")] %>% gt()
