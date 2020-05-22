@@ -3,6 +3,7 @@
 #' author: "Mitchell Linegar"
 #' toc: true
 #' toc_depth: 2
+#' always_allow_html: true
 #' includes:
 #'   pdf_document:
 #'     number_sections: true
