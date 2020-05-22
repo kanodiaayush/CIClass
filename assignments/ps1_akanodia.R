@@ -12,27 +12,17 @@
 #'     toc_float: true
 #' ---
 #### SETUP ####
-#' echo=TRUE
 # set global options
 dataset_name <- "welfare"
 outcome_family <- "binomial" # based on whether your outcome is binary or not; input to glm call
 outcome_type <- "class"
 n_sims <- 20
-<<<<<<< HEAD:assignments/ps1_mlinegar.R
-prop_to_keep <- 1.0 # if you want to only run on a random sample of the data, if want to run on full data set to 1.0
-
-# lambda <- c(0.0001, 0.001, 0.01, 0.1, 0.3, 0.5) #, 0.7, 1, 5, 10, 50, 100, 1000)
-# lambda <- c(0.0001, 0.01)
-lambda <- c(0.0001, 0.001, 0.01, 0.1, 0.3, 0.5, 0.7, 1, 5, 10, 50, 100, 1000)
-prop_drop_rf <- c(0.01, 0.02, 0.04, 0.1, 0.2, 0.3, 0.4, .5, .7, .8, .9)
-=======
 lambda <- c(0.0001, 0.001, 0.01, 0.1, 0.3, 0.5) #, 0.7, 1, 5, 10, 50, 100, 1000)
 #lambda <- c(0.0001, 0.01)
 #lambda <- c(0.0001, 0.001, 0.01, 0.1, 0.3, 0.5, 0.7, 1, 5, 10, 50, 100, 1000)
 prop_to_keep <- 1.0 # if you want to only run on a random sample of the data, if want to run on full data set to 1.0
 
 prop_drop_rf <- c(0.01, 0.02, 0.04, 0.1, 0.2, 0.3, 0.4, .5)
->>>>>>> 52df07d203fea387e6eba519004f554ea3f795f5:assignments/ps1_akanodia.R
 
 library(here)
 # devtools::install_github("hrbrmstr/hrbrthemes")
@@ -50,8 +40,8 @@ library(amlinear)
 #### KNITR SETUP ####
 #+ setup, include=FALSE
 knitr::opts_chunk$set(
-  eval=FALSE,
-  echo = FALSE,
+  eval= TRUE,
+  echo = TRUE,
   cache = TRUE, 
   warning = FALSE,
   message = FALSE,
@@ -320,13 +310,8 @@ if (dataset_name == "social") {
 #### DATA WORK ####
 # follows tutorial exactly
 #' ## Pre-Processing the Data
-<<<<<<< HEAD:assignments/ps1_mlinegar.R
-#' I use code from a set of AtheyLab tutorials, which include the following note:  
-#'        > The datasets in our [github webpage](https://github.com/gsbDBI/ExperimentData/) have been prepared for analysis so they will not require a lot of cleaning and manipulation, but let's do some minimal housekeeping. First, we will drop the columns that aren't outcomes, treatments or (pre-treatment) covariates, since we won't be using those.
-=======
 #' We use code from a set of AtheyLab tutorials, which include the following note:  
 #' > The datasets in our [github webpage](https://github.com/gsbDBI/ExperimentData/) have been prepared for analysis so they will not require a lot of cleaning and manipulation, but let's do some minimal housekeeping. First, we will drop the columns that aren't outcomes, treatments or (pre-treatment) covariates, since we won't be using those.
->>>>>>> 52df07d203fea387e6eba519004f554ea3f795f5:assignments/ps1_akanodia.R
 #' Specifically, we keep only a subset of predictors and drop observations with missing information.  
 all_variables_names <- c(outcome_variable_name, treatment_variable_name, covariate_names)
 df <- df[, which(names(df) %in% all_variables_names)]
@@ -390,28 +375,15 @@ print(tauhat_rct)
 #' We took hints from it to drop higher outcomes from one group, and lower outcomes from the other group.
 #' Then, we analyze how various methods correct for this confounding.
 #+ echo=FALSE
-<<<<<<< HEAD:assignments/ps1_mlinegar.R
-# these cutoffs courtesy of Kaleb (poc, .45 and .01)
-=======
->>>>>>> 52df07d203fea387e6eba519004f554ea3f795f5:assignments/ps1_akanodia.R
 prob = .4
 prob_control = prob # how much of the sample are we dropping?
 prob_treatment = prob
 # prob_control = 0.45  # how much of the sample are we dropping?
 # prob_treatment = 0.01
 
-<<<<<<< HEAD:assignments/ps1_mlinegar.R
-#' We now introduce sampling bias in order to simulate the situation we would be in if our data was from an observational study rather than a randomized experiment. 
-#' This situation might arise due to sampling error or selection bias, and we will be able to see how various methods correct for this induced bias. 
-#' To do, so, we under-sample treated units matching the following rule, and under-sample control units in its complement:   
-#'           - Independents on closer to the Democratic party (`partyid < 4`)
-#'           - Who have at least a college degree (`educ >= 16`)
-#'           
-=======
 #' We under-sample treated units matching the following rule, and under-sample control units in its complement:  
 #'         - Independents on closer to the Democratic party (`partyid < 4`)
 #'         - Who have at least a college degree (`educ >= 16`)
->>>>>>> 52df07d203fea387e6eba519004f554ea3f795f5:assignments/ps1_akanodia.R
       # - Republican-leaning independent or closer to the Republican party (`partyid >= 4 & partyid < 7`)
       # - More than slightly conservative (`polviews >= 5.5 & polviews < 8`)
       # - with self-reported prestige of occuption above the bottom quartile (`prestg80 >= 34`)
@@ -531,33 +503,33 @@ pY_logistic.int <- predict(pY_logistic.fit.int, type = "response")
 
 # lasso expanded data, code provided by TA
 # original data
-pW_glmnet.fit.model = glmnet::cv.glmnet(Xmod, Wmod, lambda = lambda, family = "binomial", type.measure = "class", keep=TRUE) 
-pY_glmnet.fit.model = glmnet::cv.glmnet(Xmod, Ymod, lambda = lambda, family = outcome_family, type.measure = outcome_type, keep=TRUE) 
+pW_glmnet.fit.propensity = glmnet::cv.glmnet(Xmod, Wmod, lambda = lambda, family = "binomial", type.measure = "class", keep=TRUE) 
+pY_glmnet.fit.propensity = glmnet::cv.glmnet(Xmod, Ymod, lambda = lambda, family = outcome_family, type.measure = outcome_type, keep=TRUE) 
 # expanded data
-pW_glmnet.fit.model.int = glmnet::cv.glmnet(Xmod.int, Wmod, lambda = lambda, family = "binomial", type.measure = "class", keep=TRUE) 
-pY_glmnet.fit.model.int = glmnet::cv.glmnet(Xmod.int, Ymod, lambda = lambda, family = outcome_family, type.measure = outcome_type, keep=TRUE) 
+pW_glmnet.fit.propensity.int = glmnet::cv.glmnet(Xmod.int, Wmod, lambda = lambda, family = "binomial", type.measure = "class", keep=TRUE) 
+pY_glmnet.fit.propensity.int = glmnet::cv.glmnet(Xmod.int, Ymod, lambda = lambda, family = outcome_family, type.measure = outcome_type, keep=TRUE) 
 
 # demonstration of lasso fit across lambdas:
-pW_lasso = pW_glmnet.fit.model$fit.preval[, pW_glmnet.fit.model$lambda == pW_glmnet.fit.model$lambda.min] %>% convert_to_prob()
-pW_lasso.min = pW_glmnet.fit.model$fit.preval[, pW_glmnet.fit.model$lambda == min(pW_glmnet.fit.model$lambda)] %>% convert_to_prob()
-pW_lasso.max = pW_glmnet.fit.model$fit.preval[, pW_glmnet.fit.model$lambda == max(pW_glmnet.fit.model$lambda)] %>% convert_to_prob()
-pW_lasso.rand = pW_glmnet.fit.model$fit.preval[, pW_glmnet.fit.model$lambda == base::sample(pW_glmnet.fit.model$lambda, 1)] %>% convert_to_prob()
+pW_lasso = pW_glmnet.fit.propensity$fit.preval[, pW_glmnet.fit.propensity$lambda == pW_glmnet.fit.propensity$lambda.min] %>% convert_to_prob()
+pW_lasso.min = pW_glmnet.fit.propensity$fit.preval[, pW_glmnet.fit.propensity$lambda == min(pW_glmnet.fit.propensity$lambda)] %>% convert_to_prob()
+pW_lasso.max = pW_glmnet.fit.propensity$fit.preval[, pW_glmnet.fit.propensity$lambda == max(pW_glmnet.fit.propensity$lambda)] %>% convert_to_prob()
+pW_lasso.rand = pW_glmnet.fit.propensity$fit.preval[, pW_glmnet.fit.propensity$lambda == base::sample(pW_glmnet.fit.propensity$lambda, 1)] %>% convert_to_prob()
 
-# glmnet.fit.model = glmnet::cv.glmnet(Xmod.int, Wmod, family = "binomial",keep=TRUE) 
-pW_lasso.int = pW_glmnet.fit.model.int$fit.preval[, pW_glmnet.fit.model.int$lambda == pW_glmnet.fit.model.int$lambda.min] %>% convert_to_prob()
-pW_lasso.int.min = pW_glmnet.fit.model.int$fit.preval[, pW_glmnet.fit.model.int$lambda == min(pW_glmnet.fit.model.int$lambda)] %>% convert_to_prob()
-pW_lasso.int.max = pW_glmnet.fit.model.int$fit.preval[, pW_glmnet.fit.model.int$lambda == max(pW_glmnet.fit.model.int$lambda)] %>% convert_to_prob()
-pW_lasso.int.rand = pW_glmnet.fit.model.int$fit.preval[, pW_glmnet.fit.model.int$lambda == base::sample(pW_glmnet.fit.model.int$lambda, 1)] %>% convert_to_prob()
+# glmnet.fit.propensity = glmnet::cv.glmnet(Xmod.int, Wmod, family = "binomial",keep=TRUE) 
+pW_lasso.int = pW_glmnet.fit.propensity.int$fit.preval[, pW_glmnet.fit.propensity.int$lambda == pW_glmnet.fit.propensity.int$lambda.min] %>% convert_to_prob()
+pW_lasso.int.min = pW_glmnet.fit.propensity.int$fit.preval[, pW_glmnet.fit.propensity.int$lambda == min(pW_glmnet.fit.propensity.int$lambda)] %>% convert_to_prob()
+pW_lasso.int.max = pW_glmnet.fit.propensity.int$fit.preval[, pW_glmnet.fit.propensity.int$lambda == max(pW_glmnet.fit.propensity.int$lambda)] %>% convert_to_prob()
+pW_lasso.int.rand = pW_glmnet.fit.propensity.int$fit.preval[, pW_glmnet.fit.propensity.int$lambda == base::sample(pW_glmnet.fit.propensity.int$lambda, 1)] %>% convert_to_prob()
 
 # FIXME: 
 # problems calculating probabilities: 
 # this "should" work: 
-# pW_lasso.int2 <- predict(pW_glmnet.fit.model.int, newx = Xmod.int, type = "response")
+# pW_lasso.int2 <- predict(pW_glmnet.fit.propensity.int, newx = Xmod.int, type = "response")
 # however, it returns identical predictions for every entry. This is the same if we specify a lambda, though the predcition changes:
-# pW_lasso.int3 <- predict(pW_glmnet.fit.model.int, newx = Xmod.int,  s=pW_glmnet.fit.model.int$lambda.min, type = "response")
-# pW_lasso.int4 <- predict(pW_glmnet.fit.model.int, newx = Xmod.int,  s="lambda.min", type = "response")
-# pW_lasso.int5 <- predict(pW_glmnet.fit.model.int, newx = Xmod.int,  s=pW_glmnet.fit.model.int$lambda[3], type = "response")
-# pW_lasso.int6 <- predict(pW_glmnet.fit.model.int, newx = Xmod.int,  s=pW_glmnet.fit.model.int$lambda[1], type = "response")
+# pW_lasso.int3 <- predict(pW_glmnet.fit.propensity.int, newx = Xmod.int,  s=pW_glmnet.fit.propensity.int$lambda.min, type = "response")
+# pW_lasso.int4 <- predict(pW_glmnet.fit.propensity.int, newx = Xmod.int,  s="lambda.min", type = "response")
+# pW_lasso.int5 <- predict(pW_glmnet.fit.propensity.int, newx = Xmod.int,  s=pW_glmnet.fit.propensity.int$lambda[3], type = "response")
+# pW_lasso.int6 <- predict(pW_glmnet.fit.propensity.int, newx = Xmod.int,  s=pW_glmnet.fit.propensity.int$lambda[1], type = "response")
 
 # random forest
 pW_rf.fit = regression_forest(Xmod, Wmod, num.trees = 500)
@@ -576,11 +548,6 @@ pY_rf.fit.int = regression_forest(Xmod.int, Ymod, num.trees = 500)
 # pY_rf.int = pY_rf.fit.int$predictions
 pW_rf.int = predict(pW_rf.fit.int, newdata = Xmod.int) %>% as.matrix
 pY_rf.int = predict(pY_rf.fit.int, newdata = Xmod.int) %>% as.matrix
-
-# CF
-cf = causal_forest(Xmod, Ymod, Wmod, num.trees = 500)
-cf.int = causal_forest(Xmod.int, Ymod, Wmod, num.trees = 500)
-
 
 # hist(pW_rf)
 #### BIAS FUNCTION ####
@@ -611,6 +578,7 @@ B <- function(df, treatment_model, outcome_model, outcome_type = "response"){
   
   df[, b := (pW - p) * (p * (pY_w0 - mu0) + (1 - p) * (pY_w1 - mu1))]
   
+  # 1/(p*(1-p)) * df[, mean(b)]
   return(df[,.(b)])
   }
 
@@ -681,28 +649,22 @@ ggplot(lambda_log_liks.long, aes(x = lambda, y = llh)) +
 #' We note that we only vary the propensity model; even for the case with AIPW we use ordinary OLS along with our lasso propensity models for varying lambdas.
 #' We tried to also very the outcome model; we could not get the predict function to work with our glmnet model; hence the limitation
 # plot lasso over grid of lambdas
-pW_glmnet.fit.model.int.lambda_preds <- as.data.table(pW_glmnet.fit.model.int$fit.preval)
-pW_glmnet.fit.model.int.lambda_preds <- pW_glmnet.fit.model.int.lambda_preds[
+pW_glmnet.fit.propensity.int.lambda_preds <- as.data.table(pW_glmnet.fit.propensity.int$fit.preval)
+pW_glmnet.fit.propensity.int.lambda_preds <- pW_glmnet.fit.propensity.int.lambda_preds[
   # see discussion in FIXME above about using convert_to_prob here
-  ,lapply(.SD, convert_to_prob), .SDcols = names(pW_glmnet.fit.model.int.lambda_preds)]
+  ,lapply(.SD, convert_to_prob), .SDcols = names(pW_glmnet.fit.propensity.int.lambda_preds)]
 
 # credit to Kaleb for this formulation
- tauhat_lasso_ipw.lambdas <- rbindlist(lapply(1:ncol(pW_glmnet.fit.model.int.lambda_preds), 
-                                              function(p){
-  data.frame(lambda=pW_glmnet.fit.model.int$lambda[p],
-             "ATE"=ipw(df_mod.int, as.matrix(pW_glmnet.fit.model.int.lambda_preds[,..p]))["ATE"])
+ tauhat_lasso_ipw.lambdas <- rbindlist(lapply(1:ncol(pW_glmnet.fit.propensity.int.lambda_preds), function(p){
+  data.frame(lambda=pW_glmnet.fit.propensity.int$lambda[p],"ATE"=ipw(df_mod.int, as.matrix(pW_glmnet.fit.propensity.int.lambda_preds[,..p]))["ATE"])
 }))[, model := "ipw"]
  
- tauhat_lasso_prop_score.lambdas <- rbindlist(lapply(1:ncol(pW_glmnet.fit.model.int.lambda_preds), 
-                                                     function(p){
-   data.frame(lambda=pW_glmnet.fit.model.int$lambda[p],
-              "ATE"=prop_score_ols(df_mod.int, as.matrix(pW_glmnet.fit.model.int.lambda_preds[,..p]))["ATE"])
+ tauhat_lasso_prop_score.lambdas <- rbindlist(lapply(1:ncol(pW_glmnet.fit.propensity.int.lambda_preds), function(p){
+   data.frame(lambda=pW_glmnet.fit.propensity.int$lambda[p],"ATE"=prop_score_ols(df_mod.int, as.matrix(pW_glmnet.fit.propensity.int.lambda_preds[,..p]))["ATE"])
  }))[, model := "prop_score"]
  
- tauhat_lasso_aipw.lambdas <- rbindlist(lapply(1:ncol(pW_glmnet.fit.model.int.lambda_preds), 
-                                               function(p){
-   data.frame(lambda=pW_glmnet.fit.model.int$lambda[p],
-              "ATE"=aipw_ols(df_mod.int, as.matrix(pW_glmnet.fit.model.int.lambda_preds[,..p]))["ATE"])
+ tauhat_lasso_aipw.lambdas <- rbindlist(lapply(1:ncol(pW_glmnet.fit.propensity.int.lambda_preds), function(p){
+   data.frame(lambda=pW_glmnet.fit.propensity.int$lambda[p],"ATE"=aipw_ols(df_mod.int, as.matrix(pW_glmnet.fit.propensity.int.lambda_preds[,..p]))["ATE"])
  }))[, model := "aipw"]
 
 tauhat_lasso_estimates.lambdas <- rbindlist(list(tauhat_lasso_ipw.lambdas,
@@ -734,16 +696,6 @@ ggplot(tauhat_lasso_estimates.lambdas, aes(x = lambda, y = ATE, color = model)) 
 #' always correctly specified. As a result, we get stable estimates across all lambdas for the propensity lasso model
 #' This teaches us the benefits of using the AIPW estimator!
 
-<<<<<<< HEAD:assignments/ps1_mlinegar.R
-#' We now plot log likelihood over different values of lambda on the expanded data.  
-#+ echo=TRUE
-lambda_log_liks <- pW_glmnet.fit.model.int.lambda_preds[
-  ,lapply(.SD, loglike, Wmod), .SDcols = names(pW_glmnet.fit.model.int.lambda_preds)]
-
-colnames(lambda_log_liks) <- as.character(pW_glmnet.fit.model.int$lambda)
-lambda_log_liks.long <- melt(lambda_log_liks, variable.name = "lambda", value.name = "llh")
-lambda_log_liks.long[, lambda := as.numeric(as.character(lambda))]
-=======
 #### EXPLORING CF ####
 #' \newpage
 #' ## Machine Learning Model of our choice
@@ -760,7 +712,6 @@ tauhat_rf_aipw.int = c(ATE=ate_rf_aipw.int["estimate"],
 tauhat_rf_aipw.int
 tauhat_rf_ipw.int = ipw(df_mod.int, pW_cf.int)
 tauhat_ols_rf_aipw.int = aipw_ols(df_mod.int, pW_cf.int)
->>>>>>> 52df07d203fea387e6eba519004f554ea3f795f5:assignments/ps1_akanodia.R
 
 tauhat_rf_ipw.int
 tauhat_ols_rf_aipw.int
@@ -819,8 +770,8 @@ for (prob_temp in prop_drop_rf) {
   tauhat_ols_rf_aipw_temp.int$"prop_dropped" <- prob_temp
   tauhat_ols_rf_aipw_temp.int$model <- "rf_aipw"
   
-  # print(tauhat_rf_temp.int)
-  # print(tauhat_ols_rf_aipw_temp.int)
+  print(tauhat_rf_temp.int)
+  print(tauhat_ols_rf_aipw_temp.int)
   tauhat_rf_list <- rbind(tauhat_rf_list, tauhat_rf_temp.int)
   tauhat_ols_rf_aipw_list <- rbind(tauhat_ols_rf_aipw_list, tauhat_ols_rf_aipw_temp.int)
 }
@@ -833,9 +784,6 @@ ggplot(tauhat_ols_rf_aipw_list, aes(x = prop_dropped, y = ATE, color = model)) +
   ggtitle("AIPW ATE Estimate with Random Forests Given Varied Sample Sizes") + 
   geom_abline(aes(slope = 0, intercept = tauhat_rct["ATE"]))
 
-<<<<<<< HEAD:assignments/ps1_mlinegar.R
-#### ATE CALCULATIONS: ORIGINAL DATA ####
-=======
 #' Now, without cross fitting
 tauhat_rf_list_ncf <- data.frame()
 tauhat_ols_rf_aipw_list_ncf <- data.frame()
@@ -893,7 +841,6 @@ ggplot(tauhat_ols_rf_aipw_list_ncf, aes(x = prop_dropped, y = ATE, color = model
 
 cf = causal_forest(Xmod, Ymod, Wmod, num.trees = 500)
 cf.int = causal_forest(Xmod.int, Ymod, Wmod, num.trees = 500)
->>>>>>> 52df07d203fea387e6eba519004f554ea3f795f5:assignments/ps1_akanodia.R
 
 # linear models
 tauhat_ols <- ate_condmean_ols(df_mod)
@@ -993,8 +940,9 @@ tauhat_lasso_logistic_aipw.int <- aipw_ols(df_mod.int, pW_lasso.int)
 
 #### COMPARING ATE ACROSS MODELS ####
 #' ## Comparing ATE Across Models with Original Data
-#' Finally, we compare ATE across various models. We see that AIPW forest methods performs the best across the original and interacted data,
-#' though propensity weighted regression performed on the original data.
+#' We now show ATE estimates and Confidence Intervals across models.
+#' AIPW with forest methods provides the most accurate measurements with small confidence intervals.
+#' This is true for both the original as well as interacted data
 #+ echo=FALSE
 all_estimators = rbind(
   RCT_gold_standard = tauhat_rct,
@@ -1018,6 +966,7 @@ print(round(as.matrix(all_estimators), 3))
 
 #' ## Comparing ATE Across Models with Interacted Data
 #+ echo=FALSE
+# FIXME: add identical setup for non-interacted models (remove .int, copy code from above and add to own section)
 all_estimators.int = rbind(
   RCT_gold_standard = tauhat_rct,
   naive_observational = tauhat_confounded,
@@ -1042,16 +991,19 @@ print(round(as.matrix(all_estimators.int), 3))
 #### PROPENSITY STRATIFICATION INTRODUCTION ####
 #' # Part Two
 #' 
-#' ## Justification of Propensity Stratification
-#' Propensity stratification follows the same principle as stratified random experiments, 
-#' where we would assign treatment after breaking people into groups based on their observable characteristics. 
-#' This would ensure balance between treated and control units within strata (it would allow us to avoid overlap problems if done correctly). 
-#' Propensity-based stratification functions similarly, as we are only comparing units with similar observable characteristics. 
-#' Propensity scores provide a single-dimensional, unified measure with which to compare units. 
-#' By comparing only "similar" units, 
-#' we can ensure that our estimate of the treatment effect should be more accurate. 
-#' By averaging our predictions over these strata, we can reduce the effect of bias present in only parts of the covariate space. 
-#' When we increase the number of strata (fixing N), we narrow our comparison to more similar units, and reduce the effect of any poorly-estimated strata.  
+#' Why does propensity stratification work?
+#' We need the unconfoundedness assumption, that is the potential outcomes are uncorrelated with the treatment assignments given the pretreatment covariates
+#' In Propensity Score weighting, we deduce that for units with the same propensity score, once we know the propensity score, the unconfoundedness assumption holds.
+#' In other words, instead of equalising on the covariates, we can equalise on the propensity score given covariates.
+#' The idea is that even if the covariates are different, but the propensity score of treatment is the same, the latter is a complete statistic summarising all the
+#' confounding due to covariates. Put differently and simplistically, if there are two different Xs, if their propensity of treatment is the same, then we are again
+#' in the completely randomized design setup where the probability of treatment is independent of covariates (assume there are only these two covariates)
+#' As such, stratification on propensity scores resembles a high dimensional version of a stratified random experiment, where the strata are formed over higher dimensions
+#' using the Propensity Score, learned from some Machine Learning predictive model.
+#' Now, as we grow the number of samples, we should improve upon our estimates even with the same number of strata.
+#' If we increase the number of strata, we do finer stratification, reducing inter strata differences as in a stratified random design.
+#' Hence, we reduce bias, tending to no bias, as we increase the number of strata with more number of points. More points are required for more strata because otherwise,
+#' the effects we calculate in each strata might be too noisy with too few points.
 
 #### PROPENSITY STRATIFICATION FUNCTION ####
 #' ## Propensity Stratification Function
@@ -1062,11 +1014,20 @@ print(round(as.matrix(all_estimators.int), 3))
 #' The function takes options for a number of strata and the function to estimate on the strata - 
 #' the user could supply something more complex than the simple difference-in-means, for example.  
 #' 
-#' The function checks that each strata has both treatment groups; if it does not then it is not included in the ATE calculation.  
+#' What do we do if some strata has only treatment or only control or no units? 
+#' We exclude it from our calculations entirely
 #' 
-#' We fix the number of strata at 10, following the heuristic discussed in the homework.  
-#' 
-#' Note that the true effect is `mean(W * X[,2])`.  
+<<<<<<< HEAD:assignments/ps1_mlinegar.R
+#' Note that the true effect is:
+#+ eval=FALSE, include=TRUE 
+=======
+#' Note that the true effect is   
+>>>>>>> 9a80fbe252345f0649cc6ab2f8118c272b18b57a:assignments/ps1_akanodia.R
+n = 1000; p = 20
+X = matrix(rnorm(n * p), n, p)
+Y1 = pmax(X[,1] + X[,2], 0)
+Y0 = pmax(X[,1], 0)
+mean(Y1 - Y0)
 #+ echo=TRUE
 
 propensity_stratification <- function(df, treatment_model, n_strata = 10, 
@@ -1127,36 +1088,53 @@ make_simulation <- function(){
 # ipw(df, sim_pW_logistic)
 # propensity_stratification(df, sim_pW_logistic.fit)
 
-#' We now run `r n_sims` simulations of the type described above, and report results over each simulation.  
 <<<<<<< HEAD:assignments/ps1_mlinegar.R
-#' We see that propensity stratification and IPW perform similarly, but IPW has lower average MSE.  
+#' We now run `r n_sims` simulations of the type described above for each number of strata, 
+#' and report results over each simulation.  
+#' We see that propensity stratification and IPW perform similarly, but propensity stratification has lower average MSE.  
+#' We settle on 10 strata, as it minimizes bias.  
 #+ echo=TRUE
 =======
+#' We now run `r n_sims` simulations of the type described above, and report results over each simulation.  
+#' We also run these simulations for different number of strata
 #' We see that propensity stratification and IPW perform similarly, but propensity stratification has lower average MSE.  
+#' For 1 stratum, we exactly track the difference in means estimator
+#' As we increase the number of strata, we start approaching the ipw estimator. Bias falls.
+#' We settle on 10 as the ideal number of strata. The reason is that it provides ATE with the least bias.
+#' At a high level, having too many strata increases the amount of noise with a fixed number of points, so we start at
+#' 1 and reach an optimum
 #+ echo=FALSE
->>>>>>> 52df07d203fea387e6eba519004f554ea3f795f5:assignments/ps1_akanodia.R
 
-sim_storage <- data.table()
-for (i in 1:n_sims){
-  df <- make_simulation()
+nstratas <- c(1, 2, 5, 10, 20, 50)
+for (nstrata in nstratas) {
+  sim_storage <- data.table()
+  for (i in 1:n_sims){
+    df <- make_simulation()
+    Y1 = pmax(df$V1 + df$V2, 0)
+    Y0 = pmax(df$V1, 0)
+    true_tau = mean(Y1 - Y0)
+    
+    sim_pW_logistic.fit <- glm(W ~ ., data = df %>% select(-Y), family = "binomial")
+    sim_pW_logistic <- predict(sim_pW_logistic.fit, type = "response")
+    
+    tau_ests <- rbind(
+      c(true_tau, NA, NA),
+      difference_in_means(df),
+      ipw(df, sim_pW_logistic),
+      propensity_stratification(df, sim_pW_logistic.fit, n_strata=nstrata)  
+    ) %>% as.data.frame()
+    
+    tau_ests$sim_num <- i
+    tau_ests$est <- c("true", "difference_in_means", "ipw", "propensity_stratification")
+    sim_storage <- rbindlist(list(sim_storage, tau_ests), fill = TRUE)
+  }
+
+  plt <- ggplot(sim_storage, aes(x = sim_num, y = ATE, color = est)) + geom_line() +
+    ggtitle(sprintf("Number of Strata = %d", nstrata))
+  print(plt)
   
-  sim_pW_logistic.fit <- glm(W ~ ., data = df %>% select(-Y), family = "binomial")
-  sim_pW_logistic <- predict(sim_pW_logistic.fit, type = "response")
-  
-  tau_ests <- rbind(
-    c(df[,mean(W * V2)], NA, NA),
-    difference_in_means(df),
-    ipw(df, sim_pW_logistic),
-    propensity_stratification(df, sim_pW_logistic.fit)  
-  ) %>% as.data.frame()
-  
-  tau_ests$sim_num <- i
-  tau_ests$est <- c("true", "difference_in_means", "ipw", "propensity_stratification")
-  sim_storage <- rbindlist(list(sim_storage, tau_ests), fill = TRUE)
 }
-
-ggplot(sim_storage, aes(x = sim_num, y = ATE, color = est)) + geom_line()
-<<<<<<< HEAD:assignments/ps1_mlinegar.R
+# ggplot(sim_storage, aes(x = sim_num, y = ATE, color = est)) + geom_line()
 
 ##### COPY OF OTHER FUNCTIONS ####
 #' # APPENDIX: Additional Functions Used  
@@ -1181,9 +1159,3 @@ plot_prob <- function(prob, pred, model_name = "", data_name = ""){
 convert_to_prob <- function(x){
   1/(1 + exp(-x))
 }
-
-loglike <- function(pred, data){
-  mean(data * log(pred) + (1 - data) * log(1 - pred))
-}
-=======
->>>>>>> 52df07d203fea387e6eba519004f554ea3f795f5:assignments/ps1_akanodia.R

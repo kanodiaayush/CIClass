@@ -973,10 +973,8 @@ if (dataset_name == "welfare") {
                                covariate_names[continuous_variables][2],
                                covariate_names[covariate_names != var_of_interest][1]))
 }
-```
 
-
-```{r causal_forest_single_variable_plot_prepare, echo=FALSE}
+#+ causal_forest_single_variable_plot_prepare, echo=FALSE
 # Create a grid of values: if continuous, quantiles; else, plot the actual values
 is_continuous <- (length(unique(df_train[,var_of_interest])) > 5) # crude rule for determining continuity
 if(is_continuous) {
@@ -993,9 +991,8 @@ df_eval <- crossing(df_median, df_grid)
 pred <- predict(cf, newdata=df_eval[,covariate_names], estimate.variance=TRUE)
 df_eval$tauhat <- pred$predictions
 df_eval$se <- sqrt(pred$variance.estimates)
-```
 
-```{r causal_forest_single_variable_plot, echo=FALSE, results='as_is', fig.height=4}
+causal_forest_single_variable_plot, echo=FALSE, results='as_is', fig.height=4
 # Change to factor so the plotted values are evenly spaced
 df_eval[, var_of_interest] <- as.factor(round(df_eval[, var_of_interest], digits = 4))
 # Descriptive labeling
@@ -1011,4 +1008,4 @@ df_eval %>%
   ylab("Predicted Treatment Effect") +
   theme_linedraw() +
   theme(axis.ticks = element_blank())
-```
+
