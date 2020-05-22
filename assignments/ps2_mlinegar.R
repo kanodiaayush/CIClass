@@ -973,7 +973,8 @@ gt(estimates,rowname_col = "row_names")  %>%
     subtitle = paste0("Updated to ",Sys.Date())) %>%
   cols_label(V2 = "df_est",
              V3 = "df_test",
-             V4 = "df_tr")
+             V4 = "df_tr") %>%
+  as_latex()
 
 #' ### Partial Dependence Plots
 
@@ -1050,7 +1051,8 @@ df_eval %>%
   theme(axis.ticks = element_blank())
 
 
-df_eval[,c(var_of_interest,"tauhat","se")] %>% gt()
+df_eval[,c(var_of_interest,"tauhat","se")] %>% gt() %>%
+  as_latex()
 
 #' Now for another variable:
 #+
@@ -1103,7 +1105,8 @@ df_eval %>%
   theme_linedraw() +
   theme(axis.ticks = element_blank())
 
-df_eval[,c(var_of_interest,"tauhat","se")] %>% gt()
+df_eval[,c(var_of_interest,"tauhat","se")] %>% gt() %>%
+  as_latex()
 
 #### 70% ####
 #' Now 70% of the data
@@ -1166,7 +1169,8 @@ df_eval %>%
   theme(axis.ticks = element_blank())
 
 
-df_eval[,c(var_of_interest,"tauhat","se")] %>% gt()
+df_eval[,c(var_of_interest,"tauhat","se")] %>% gt() %>%
+  as_latex()
 
 #' Now for another variable:
 #+
@@ -1219,7 +1223,8 @@ df_eval %>%
   theme_linedraw() +
   theme(axis.ticks = element_blank())
 
-df_eval[,c(var_of_interest,"tauhat","se")] %>% gt()
+df_eval[,c(var_of_interest,"tauhat","se")] %>% gt() %>%
+  as_latex()
 
 #### 50% ####
 #' Finally 50% of the data
@@ -1282,7 +1287,8 @@ df_eval %>%
   theme(axis.ticks = element_blank())
 
 
-df_eval[,c(var_of_interest,"tauhat","se")] %>% gt()
+df_eval[,c(var_of_interest,"tauhat","se")] %>% gt() %>%
+  as_latex()
 
 #' Now for another variable:
 #+
@@ -1335,5 +1341,6 @@ df_eval %>%
   theme_linedraw() +
   theme(axis.ticks = element_blank())
 
-df_eval[,c(var_of_interest,"tauhat","se")] %>% gt()
+df_eval[,c(var_of_interest,"tauhat","se")] %>% gt() %>%
+  as_latex()
 
