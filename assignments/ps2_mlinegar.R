@@ -426,61 +426,61 @@ X = matrix(rnorm(n*p), n, p)
 tau = apply(X, 1, taufn)
 W = rbinom(n, 1, 1/(1 + exp(-X[,1] / 2)))
 Y = pmax(0, X[,1] / 2 + X[,2]) + W * tau + rnorm(n)
-df <- cbind(X, W, Y)
-colnames(df) <- c(paste0("X", 1:ncol(X)), "W", "Y")
-df <- as.data.frame(df)
+sim_df <- cbind(X, W, Y)
+colnames(sim_df) <- c(paste0("X", 1:ncol(X)), "W", "Y")
+sim_df <- as.data.frame(sim_df)
 
 
 #' We now train a causal forest, compate out-of-bag CATE estimates, and sort the simulation by estimated CATE into quartiles.  
 #+ echo=TRUE
 cf <- causal_forest(
-  X = as.matrix(df[,grepl("X", colnames(df))]),
-  Y = df$Y,
-  W = df$W,
+  X = as.matrix(sim_df[,grepl("X", colnames(sim_df))]),
+  Y = sim_df$Y,
+  W = sim_df$W,
   num.trees=200)
 
 oob_pred <- predict(cf, estimate.variance=TRUE)
-df$cate <- oob_pred$predictions
+sim_df$cate <- oob_pred$predictions
 
 # Manually creating subgroups
 num_tiles <- 4  # ntiles = CATE is above / below the median
-df$ntile <- factor(ntile(oob_pred$predictions, n=num_tiles))
+sim_df$ntile <- factor(ntile(oob_pred$predictions, n=num_tiles))
 
 # true ATE per quartile?
-df$tau <- tau
+sim_df$tau <- tau
 
 # ATE estimates
-df_qtile <- setDT(df)[,.(
+sim_df_qtile <- setDT(sim_df)[,.(
   avg_tau = mean(tau),
   avg_cf_cate = mean(cate)
   ),.(ntile)][order(ntile)]
 
-df_qtile
+sim_df_qtile
 
 #' We see that the causal forest CATE estimates within each quartile are substantially different than the actual effect.  
 #' Further, we see that there is substantial correlation between the quartile number and the average CATE estimate:
 #+ echo=TRUE
-cor(as.numeric(df_qtile$ntile), df_qtile$avg_cf_cate)
+cor(as.numeric(sim_df_qtile$ntile), sim_df_qtile$avg_cf_cate)
 
 #' We now follow the HTE tutorial in using AIPW to estimate the CATE in each quartile. 
 #+ echo=TRUE
 
 estimated_aipw_ate <- lapply(
   seq(num_tiles), function(w) {
-    ate <- average_treatment_effect(cf, subset = df$ntile == w)
+    ate <- average_treatment_effect(cf, subset = sim_df$ntile == w)
   })
 estimated_aipw_ate <- data.frame(do.call(rbind, estimated_aipw_ate))
 estimated_aipw_ate$ntile <- factor(seq(num_tiles))
 setDT(estimated_aipw_ate)
 setnames(estimated_aipw_ate, c("aipw_estimate", "aipw_std.err", "ntile"))
 # join CATE estimates together
-df_qtile <- df_qtile[estimated_aipw_ate, on = .(ntile)]
-df_qtile
+sim_df_qtile <- sim_df_qtile[estimated_aipw_ate, on = .(ntile)]
+sim_df_qtile
 
 #' We see that AIPW is generally much closer to the actual $\tau$, and that even when estimated within each quartile, $\tau$ lies within the confidence intervals implied by the standard error. 
 #' Further, we see that the correlation between the AIPW estimate and the quartile number is lower than that of the causal forest estimate:  
 #+ echo=TRUE
-cor(as.numeric(df_qtile$ntile), df_qtile$aipw_estimate)
+cor(as.numeric(sim_df_qtile$ntile), sim_df_qtile$aipw_estimate)
 
 #' We now repeat the same analysis for the same experimental setup an additional `r n_sims` times. 
 #+ echo=TRUE
@@ -488,7 +488,7 @@ taufn = function(x) { 1 / 3 }
 
 # save things across sims
 cf_cor_storage <- data.table()
-df_qtile_storage <- data.table()
+sim_df_qtile_storage <- data.table()
 aipw_cor_storage <- data.table()
 
 for (i in 1:n_sims){
@@ -497,52 +497,52 @@ for (i in 1:n_sims){
   tau = apply(X, 1, taufn)
   W = rbinom(n, 1, 1/(1 + exp(-X[,1] / 2)))
   Y = pmax(0, X[,1] / 2 + X[,2]) + W * tau + rnorm(n)
-  df <- cbind(X, W, Y)
-  colnames(df) <- c(paste0("X", 1:ncol(X)), "W", "Y")
-  df <- as.data.frame(df)
+  sim_df <- cbind(X, W, Y)
+  colnames(sim_df) <- c(paste0("X", 1:ncol(X)), "W", "Y")
+  sim_df <- as.data.frame(sim_df)
   
   cf <- causal_forest(
-    X = as.matrix(df[,grepl("X", colnames(df))]),
-    Y = df$Y,
-    W = df$W,
+    X = as.matrix(sim_df[,grepl("X", colnames(sim_df))]),
+    Y = sim_df$Y,
+    W = sim_df$W,
     num.trees=200)
   
   oob_pred <- predict(cf, estimate.variance=TRUE)
-  df$cate <- oob_pred$predictions
+  sim_df$cate <- oob_pred$predictions
   
   # Manually creating subgroups
   num_tiles <- 4  # ntiles = CATE is above / below the median
-  df$ntile <- factor(ntile(oob_pred$predictions, n=num_tiles))
+  sim_df$ntile <- factor(ntile(oob_pred$predictions, n=num_tiles))
   
   # true ATE per quartile?
-  df$tau <- tau
+  sim_df$tau <- tau
   
   # ATE estimates
-  df_qtile <- setDT(df)[,.(
+  sim_df_qtile <- setDT(sim_df)[,.(
     avg_tau = mean(tau),
     avg_cf_cate = mean(cate)
   ),.(ntile)][order(ntile)]
   
-  cf_cor <- cor(as.numeric(df_qtile$ntile), df_qtile$avg_cf_cate) %>% as.data.table()
+  cf_cor <- cor(as.numeric(sim_df_qtile$ntile), sim_df_qtile$avg_cf_cate) %>% as.data.table()
   setnames(cf_cor, "cor")
   
   cf_cor_storage <- rbindlist(list(cf_cor_storage, cf_cor))
   
   estimated_aipw_ate <- lapply(
     seq(num_tiles), function(w) {
-      ate <- average_treatment_effect(cf, subset = df$ntile == w)
+      ate <- average_treatment_effect(cf, subset = sim_df$ntile == w)
     })
   estimated_aipw_ate <- data.frame(do.call(rbind, estimated_aipw_ate))
   estimated_aipw_ate$ntile <- factor(seq(num_tiles))
   setDT(estimated_aipw_ate)
   setnames(estimated_aipw_ate, c("aipw_estimate", "aipw_std.err", "ntile"))
   # join CATE estimates together
-  df_qtile <- df_qtile[estimated_aipw_ate, on = .(ntile)]
-  df_qtile$sim <- i
+  sim_df_qtile <- sim_df_qtile[estimated_aipw_ate, on = .(ntile)]
+  sim_df_qtile$sim <- i
   
-  df_qtile_storage <- rbindlist(list(df_qtile_storage, df_qtile))
+  sim_df_qtile_storage <- rbindlist(list(sim_df_qtile_storage, sim_df_qtile))
   
-  aipw_cor <- cor(as.numeric(df_qtile$ntile), df_qtile$aipw_estimate) %>% as.data.table()
+  aipw_cor <- cor(as.numeric(sim_df_qtile$ntile), sim_df_qtile$aipw_estimate) %>% as.data.table()
   setnames(aipw_cor, "cor")
   aipw_cor_storage <- rbindlist(list(aipw_cor_storage, aipw_cor))
 }
@@ -559,7 +559,7 @@ aipw_cor_storage %>% summary()
 #' Finally, we summarize the means over each variable over all simulations by `ntile`. 
 #' We see again see the high degree of correlation between `ntile` and `avg_cf_cate`, and that `aipw_estimate` are close to the true $\tau$. 
 #+ echo=TRUE
-df_qtile_storage[,lapply(.SD, mean), .(ntile)]
+sim_df_qtile_storage[,lapply(.SD, mean), .(ntile)]
 
 #' ## Simulation Exercise with new $\tau$
 #' In this section we repeat the analysis above, but we now use:
@@ -570,7 +570,7 @@ taufn = function(x) { 1 / (1 + exp(-x[2]/2)) }
 
 # save things across sims
 cf_cor_storage <- data.table()
-df_qtile_storage <- data.table()
+sim_df_qtile_storage <- data.table()
 aipw_cor_storage <- data.table()
 
 for (i in 1:n_sims){
@@ -579,52 +579,52 @@ for (i in 1:n_sims){
   tau = apply(X, 1, taufn)
   W = rbinom(n, 1, 1/(1 + exp(-X[,1] / 2)))
   Y = pmax(0, X[,1] / 2 + X[,2]) + W * tau + rnorm(n)
-  df <- cbind(X, W, Y)
-  colnames(df) <- c(paste0("X", 1:ncol(X)), "W", "Y")
-  df <- as.data.frame(df)
+  sim_df <- cbind(X, W, Y)
+  colnames(sim_df) <- c(paste0("X", 1:ncol(X)), "W", "Y")
+  sim_df <- as.data.frame(sim_df)
   
   cf <- causal_forest(
-    X = as.matrix(df[,grepl("X", colnames(df))]),
-    Y = df$Y,
-    W = df$W,
+    X = as.matrix(sim_df[,grepl("X", colnames(sim_df))]),
+    Y = sim_df$Y,
+    W = sim_df$W,
     num.trees=200)
   
   oob_pred <- predict(cf, estimate.variance=TRUE)
-  df$cate <- oob_pred$predictions
+  sim_df$cate <- oob_pred$predictions
   
   # Manually creating subgroups
   num_tiles <- 4  # ntiles = CATE is above / below the median
-  df$ntile <- factor(ntile(oob_pred$predictions, n=num_tiles))
+  sim_df$ntile <- factor(ntile(oob_pred$predictions, n=num_tiles))
   
   # true ATE per quartile?
-  df$tau <- tau
+  sim_df$tau <- tau
   
   # ATE estimates
-  df_qtile <- setDT(df)[,.(
+  sim_df_qtile <- setDT(sim_df)[,.(
     avg_tau = mean(tau),
     avg_cf_cate = mean(cate)
   ),.(ntile)][order(ntile)]
   
-  cf_cor <- cor(as.numeric(df_qtile$ntile), df_qtile$avg_cf_cate) %>% as.data.table()
+  cf_cor <- cor(as.numeric(sim_df_qtile$ntile), sim_df_qtile$avg_cf_cate) %>% as.data.table()
   setnames(cf_cor, "cor")
   
   cf_cor_storage <- rbindlist(list(cf_cor_storage, cf_cor))
   
   estimated_aipw_ate <- lapply(
     seq(num_tiles), function(w) {
-      ate <- average_treatment_effect(cf, subset = df$ntile == w)
+      ate <- average_treatment_effect(cf, subset = sim_df$ntile == w)
     })
   estimated_aipw_ate <- data.frame(do.call(rbind, estimated_aipw_ate))
   estimated_aipw_ate$ntile <- factor(seq(num_tiles))
   setDT(estimated_aipw_ate)
   setnames(estimated_aipw_ate, c("aipw_estimate", "aipw_std.err", "ntile"))
   # join CATE estimates together
-  df_qtile <- df_qtile[estimated_aipw_ate, on = .(ntile)]
-  df_qtile$sim <- i
+  sim_df_qtile <- sim_df_qtile[estimated_aipw_ate, on = .(ntile)]
+  sim_df_qtile$sim <- i
   
-  df_qtile_storage <- rbindlist(list(df_qtile_storage, df_qtile))
+  sim_df_qtile_storage <- rbindlist(list(sim_df_qtile_storage, sim_df_qtile))
   
-  aipw_cor <- cor(as.numeric(df_qtile$ntile), df_qtile$aipw_estimate) %>% as.data.table()
+  aipw_cor <- cor(as.numeric(sim_df_qtile$ntile), sim_df_qtile$aipw_estimate) %>% as.data.table()
   setnames(aipw_cor, "cor")
   aipw_cor_storage <- rbindlist(list(aipw_cor_storage, aipw_cor))
 }
@@ -642,7 +642,7 @@ aipw_cor_storage %>% summary()
 #' This time we see a high degree of correlation between `ntile`, `avg_cf_cate`, and  `aipw_estimate`, 
 #' and that our estimates of $\tau$ are badly biased, and outside our confidence intervals for our AIPW estimates.  
 #+ echo=TRUE
-df_qtile_storage[,lapply(.SD, mean), .(ntile)]
+sim_df_qtile_storage[,lapply(.SD, mean), .(ntile)]
 
 #' ## Testing Calibration
 #' For this section, we run a single simulation with two different $\tau$ functions, but otherwise identical data so that our results are comparable. 
@@ -659,23 +659,23 @@ W = rbinom(n, 1, 1/(1 + exp(-X[,1] / 2)))
 epsilon = rnorm(n)
 Y1 = pmax(0, X[,1] / 2 + X[,2]) + W * tau1 + epsilon
 Y2 = pmax(0, X[,1] / 2 + X[,2]) + W * tau2 + epsilon
-df1 <- cbind(X, W, Y1)
-df2 <- cbind(X, W, Y2)
-colnames(df1) <- c(paste0("X", 1:ncol(X)), "W", "Y")
-colnames(df2) <- c(paste0("X", 1:ncol(X)), "W", "Y")
-df1 <- as.data.frame(df1)
-df2 <- as.data.frame(df2)
+sim_df1 <- cbind(X, W, Y1)
+sim_df2 <- cbind(X, W, Y2)
+colnames(sim_df1) <- c(paste0("X", 1:ncol(X)), "W", "Y")
+colnames(sim_df2) <- c(paste0("X", 1:ncol(X)), "W", "Y")
+sim_df1 <- as.data.frame(sim_df1)
+sim_df2 <- as.data.frame(sim_df2)
 
 cf1 <- causal_forest(
-  X = as.matrix(df1[,grepl("X", colnames(df1))]),
-  Y = df1$Y,
-  W = df1$W,
+  X = as.matrix(sim_df1[,grepl("X", colnames(sim_df1))]),
+  Y = sim_df1$Y,
+  W = sim_df1$W,
   num.trees=200)
 
 cf2 <- causal_forest(
-  X = as.matrix(df2[,grepl("X", colnames(df2))]),
-  Y = df2$Y,
-  W = df2$W,
+  X = as.matrix(sim_df2[,grepl("X", colnames(sim_df2))]),
+  Y = sim_df2$Y,
+  W = sim_df2$W,
   num.trees=200)
 
 tc1 <- test_calibration(cf1)
@@ -814,7 +814,7 @@ kable_styling(kable(mse_summary_1,  "html", digits = 5,
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
 
-#+ echo=true
+#+ echo=TRUE
 rloss_long <- mse_1 %>% pivot_longer(cols = everything())
 
 ggplot(rloss_long,aes(x=value)) + 
@@ -840,7 +840,7 @@ kable_styling(kable(mse_summary_2,  "html", digits = 5,
                     caption="Estimate loss: comparison across methods"),
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
-#+ echo=true
+#+ echo=TRUE
 rloss_long <- mse_2 %>% pivot_longer(cols = everything())
 
 ggplot(rloss_long,aes(x=value)) + 
@@ -870,7 +870,7 @@ kable_styling(kable(mse_summary_3,  "html", digits = 5,
                     caption="Estimate loss: comparison across methods"),
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
-#+ echo=true
+#+ echo=TRUE
 rloss_long <- mse_3 %>% pivot_longer(cols = everything())
 
 ggplot(rloss_long,aes(x=value)) + 
@@ -897,7 +897,7 @@ kable_styling(kable(mse_summary_4,  "html", digits = 5,
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
 
-#+ echo=true
+#+ echo=TRUE
 rloss_long <- mse_4 %>% pivot_longer(cols = everything())
 
 ggplot(rloss_long,aes(x=value)) + 
