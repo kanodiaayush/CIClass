@@ -681,11 +681,11 @@ cf2 <- causal_forest(
 tc1 <- test_calibration(cf1)
 tc2 <- test_calibration(cf2)
 # convert to one-sided p-values
-dimnames(blp.summary)[[2]][4] <- gsub("[|]", "", dimnames(blp.summary)[[2]][4])
-blp.summary[, 4] <- ifelse(blp.summary[, 3] < 0, 1 - blp.summary[, 4] / 2, blp.summary[, 4] / 2)
+#dimnames(blp.summary)[[2]][4] <- gsub("[|]", "", dimnames(blp.summary)[[2]][4])
+#blp.summary[, 4] <- ifelse(blp.summary[, 3] < 0, 1 - blp.summary[, 4] / 2, blp.summary[, 4] / 2)
 # convert to one-sided p-values
-dimnames(blp.summary)[[2]][4] <- gsub("[|]", "", dimnames(blp.summary)[[2]][4])
-blp.summary[, 4] <- ifelse(blp.summary[, 3] < 0, 1 - blp.summary[, 4] / 2, blp.summary[, 4] / 2)
+#dimnames(blp.summary)[[2]][4] <- gsub("[|]", "", dimnames(blp.summary)[[2]][4])
+#blp.summary[, 4] <- ifelse(blp.summary[, 3] < 0, 1 - blp.summary[, 4] / 2, blp.summary[, 4] / 2)
 
 tc1
 tc2
@@ -798,16 +798,18 @@ cf_learner <- function(df_mod){
 
 #' Here we aggregate and compare our results. 
 #+ df_mod, echo=TRUE
+p <- mean(df_mod$W)
+Y_star <- ((df_mod$W - p)/(p*(1-p)))*df_mod$Y
 
 # Compute test mse for all methods
-mse <- data.frame(
+mse_1 <- data.frame(
   Causal_Forest_Loss = (Y_star - cf_learner(df_mod))^2,
   X_Learner_Loss = (Y_star - x_learner(df_mod))^2,
   S_Learner_Loss = (Y_star - s_learner(df_mod))^2,
   T_Learner_Loss = (Y_star - s_learner(df_mod))^2)
-mse_summary <- describe(mse)[, c('mean', 'se')]
+mse_summary_1 <- describe(mse_1)[, c('mean', 'se')]
 #+ results='asis'
-kable_styling(kable(mse_summary,  "html", digits = 5,
+kable_styling(kable(mse_summary_1,  "html", digits = 5,
                     caption="Estimate loss: comparison across methods"),
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
@@ -825,14 +827,16 @@ ggplot(rloss_long,aes(x=value)) +
 df_mod_20pct <- df_mod %>% 
   dplyr::sample_frac(.2) %>% setDT()
 
-mse <- data.frame(
+p <- mean(df_mod_20pct$W)
+Y_star <- ((df_mod_20pct$W - p)/(p*(1-p)))*df_mod_20pct$Y
+mse_2 <- data.frame(
   Causal_Forest_Loss = (Y_star - cf_learner(df_mod_20pct))^2,
   X_Learner_Loss = (Y_star - x_learner(df_mod_20pct))^2,
   S_Learner_Loss = (Y_star - s_learner(df_mod_20pct))^2,
   T_Learner_Loss = (Y_star - s_learner(df_mod_20pct))^2)
-mse_summary <- describe(mse)[, c('mean', 'se')]
+mse_summary_2 <- describe(mse_2)[, c('mean', 'se')]
 #+ results='asis'
-kable_styling(kable(mse_summary,  "html", digits = 5,
+kable_styling(kable(mse_summary_2,  "html", digits = 5,
                     caption="Estimate loss: comparison across methods"),
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
@@ -853,14 +857,16 @@ df_mod_ctrl <- df_mod[W==0] %>% sample_n(min(n_ctrl, n_treat)) %>% setDT()
 df_mod_treat <- df_mod[W==1] %>% sample_n(min(n_ctrl, n_treat)) %>% setDT()
 df_mod_ctrl_treat_balance <- rbindlist(list(df_mod_ctrl, df_mod_treat))
 
-mse <- data.frame(
+p <- mean(df_mod_ctrl_treat_balance$W)
+Y_star <- ((df_mod_ctrl_treat_balance$W - p)/(p*(1-p)))*df_mod_ctrl_treat_balance$Y
+mse_3 <- data.frame(
   Causal_Forest_Loss = (Y_star - cf_learner(df_mod_ctrl_treat_balance))^2,
   X_Learner_Loss = (Y_star - x_learner(df_mod_ctrl_treat_balance))^2,
   S_Learner_Loss = (Y_star - s_learner(df_mod_ctrl_treat_balance))^2,
   T_Learner_Loss = (Y_star - s_learner(df_mod_ctrl_treat_balance))^2)
-mse_summary <- describe(mse)[, c('mean', 'se')]
+mse_summary_3 <- describe(mse_3)[, c('mean', 'se')]
 #+ results='asis'
-kable_styling(kable(mse_summary,  "html", digits = 5,
+kable_styling(kable(mse_summary_3,  "html", digits = 5,
                     caption="Estimate loss: comparison across methods"),
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
@@ -877,14 +883,16 @@ df_mod_ctrl <- df_mod[W==0]
 df_mod_treat <- df_mod[W==1] %>% sample_n(n_ctrl / 5) %>% setDT()
 df_mod_more_ctrl <- rbindlist(list(df_mod_ctrl, df_mod_treat))
 
-mse <- data.frame(
+p <- mean(df_mod_more_ctrl$W)
+Y_star <- ((df_mod_more_ctrl$W - p)/(p*(1-p)))*df_mod_more_ctrl$Y
+mse_4 <- data.frame(
   Causal_Forest_Loss = (Y_star - cf_learner(df_mod_more_ctrl))^2,
   X_Learner_Loss = (Y_star - x_learner(df_mod_more_ctrl))^2,
   S_Learner_Loss = (Y_star - s_learner(df_mod_more_ctrl))^2,
   T_Learner_Loss = (Y_star - s_learner(df_mod_more_ctrl))^2)
-mse_summary <- describe(mse)[, c('mean', 'se')]
+mse_summary_4 <- describe(mse)[, c('mean', 'se')]
 #+ results='asis'
-kable_styling(kable(mse_summary,  "html", digits = 5,
+kable_styling(kable(mse_summary_4,  "html", digits = 5,
                     caption="Estimate loss: comparison across methods"),
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
