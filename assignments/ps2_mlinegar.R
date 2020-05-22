@@ -419,7 +419,7 @@ tauhat_lin_logistic_aipw <- aipw_ols(df_mod, pW_logistic)
 #' # Problem 1
 #' ## CATE Simulation
 #' We first run the following simulation:
-#+ echo=true
+#+ echo=TRUE
 n = 8000; p = 6
 taufn = function(x) { 1 / 3 }
 X = matrix(rnorm(n*p), n, p)
@@ -432,7 +432,7 @@ df <- as.data.frame(df)
 
 
 #' We now train a causal forest, compate out-of-bag CATE estimates, and sort the simulation by estimated CATE into quartiles.  
-#+ echo=true
+#+ echo=TRUE
 cf <- causal_forest(
   X = as.matrix(df[,grepl("X", colnames(df))]),
   Y = df$Y,
@@ -459,11 +459,11 @@ df_qtile
 
 #' We see that the causal forest CATE estimates within each quartile are substantially different than the actual effect.  
 #' Further, we see that there is substantial correlation between the quartile number and the average CATE estimate:
-#+ echo=true
+#+ echo=TRUE
 cor(as.numeric(df_qtile$ntile), df_qtile$avg_cf_cate)
 
 #' We now follow the HTE tutorial in using AIPW to estimate the CATE in each quartile. 
-#+ echo=true
+#+ echo=TRUE
 
 estimated_aipw_ate <- lapply(
   seq(num_tiles), function(w) {
@@ -479,11 +479,11 @@ df_qtile
 
 #' We see that AIPW is generally much closer to the actual $\tau$, and that even when estimated within each quartile, $\tau$ lies within the confidence intervals implied by the standard error. 
 #' Further, we see that the correlation between the AIPW estimate and the quartile number is lower than that of the causal forest estimate:  
-#+ echo=true
+#+ echo=TRUE
 cor(as.numeric(df_qtile$ntile), df_qtile$aipw_estimate)
 
 #' We now repeat the same analysis for the same experimental setup an additional `r n_sims` times. 
-#+ echo=true
+#+ echo=TRUE
 taufn = function(x) { 1 / 3 }
 
 # save things across sims
@@ -549,21 +549,21 @@ for (i in 1:n_sims){
 
 #' We now summarize the results over our simulations.  
 #' We see that causal forests has a high degree of correlation between CATE and `ntile` over all simulations:  
-#+ echo=true
+#+ echo=TRUE
 cf_cor_storage %>% summary()
 
 #' On the other hand, the AIPW correlations are centered close to zero:  
-#+ echo=true 
+#+ echo=TRUE 
 aipw_cor_storage %>% summary()
 
 #' Finally, we summarize the means over each variable over all simulations by `ntile`. 
 #' We see again see the high degree of correlation between `ntile` and `avg_cf_cate`, and that `aipw_estimate` are close to the true $\tau$. 
-#+ echo=true
+#+ echo=TRUE
 df_qtile_storage[,lapply(.SD, mean), .(ntile)]
 
 #' ## Simulation Exercise with new $\tau$
 #' In this section we repeat the analysis above, but we now use:
-#+ echo=true
+#+ echo=TRUE
 taufn = function(x) { 1 / (1 + exp(-x[2]/2)) }
 
 #+ echo=false
@@ -631,23 +631,23 @@ for (i in 1:n_sims){
 
 #' We now summarize the results over our simulations.  
 #' We again see that causal forests has a high degree of correlation between CATE and `ntile` over all simulations:  
-#+ echo=true
+#+ echo=TRUE
 cf_cor_storage %>% summary()
 
 #' This time, AIPW estimates have a similar degree of correlation:
-#+ echo=true 
+#+ echo=TRUE 
 aipw_cor_storage %>% summary()
 
 #' Again, we summarize the means over each variable over all simulations by `ntile`. 
 #' This time we see a high degree of correlation between `ntile`, `avg_cf_cate`, and  `aipw_estimate`, 
 #' and that our estimates of $\tau$ are badly biased, and outside our confidence intervals for our AIPW estimates.  
-#+ echo=true
+#+ echo=TRUE
 df_qtile_storage[,lapply(.SD, mean), .(ntile)]
 
 #' ## Testing Calibration
 #' For this section, we run a single simulation with two different $\tau$ functions, but otherwise identical data so that our results are comparable. 
 #' 
-#+ echo=true
+#+ echo=TRUE
 
 taufn1 = function(x) { 1 / 3 }
 taufn2 = function(x) { 1 / (1 + exp(-x[2]/2)) }
@@ -704,7 +704,7 @@ tc2
 #' ### S-learner
 #' We first examine the S-learner, which is a single random forest, fitted to all of the data. 
 #' We estimate $\hat\tau = $\hat\mu((x,1)) - \hat\mu((x,0))$.  
-#+ echo=true
+#+ echo=TRUE
 
 # from lecture
 
@@ -732,7 +732,7 @@ s_learner <- function(df_mod){
 #' ### T-learner
 #' We now examine the T-learner, where we estimate two random forests
 #' We follow the example code from lecture:
-#+ echo=true
+#+ echo=TRUE
 t_learner <- function(df_mod){
   Xmod = df_mod[,.SD, .SDcols = names(df_mod)[!names(df_mod) %in% c("Y", "W")]] %>% as.matrix()
   Ymod = df_mod$Y
@@ -753,7 +753,7 @@ t_learner <- function(df_mod){
 
 #' ### X-learner
 #' We now estimate $\hat\tau$ using the X-learner, which
-#+ echo=true
+#+ echo=TRUE
 x_learner <- function(df_mod){
   Xmod = df_mod[,.SD, .SDcols = names(df_mod)[!names(df_mod) %in% c("Y", "W")]] %>% as.matrix()
   Ymod = df_mod$Y
@@ -779,7 +779,7 @@ x_learner <- function(df_mod){
 
 #' ### Causal Forest
 #' Finally, we estimate $\hat\tau$ with a causal forest. 
-#+ echo=true
+#+ echo=TRUE
 
 cf_learner <- function(df_mod){
   Xmod = df_mod[,.SD, .SDcols = names(df_mod)[!names(df_mod) %in% c("Y", "W")]] %>% as.matrix()
@@ -797,7 +797,7 @@ cf_learner <- function(df_mod){
 # cf_learner(df_mod)
 
 #' Here we aggregate and compare our results. 
-#+ df_mod, echo=true
+#+ df_mod, echo=TRUE
 
 # Compute test mse for all methods
 mse <- data.frame(
@@ -812,7 +812,7 @@ kable_styling(kable(mse_summary,  "html", digits = 5,
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
 
-#+ echo=true
+#+ echo=TRUE
 rloss_long <- mse %>% pivot_longer(cols = everything())
 
 ggplot(rloss_long,aes(x=value)) + 
@@ -821,7 +821,7 @@ ggplot(rloss_long,aes(x=value)) +
 #' ## Changing Size of Datasets
 #' In this section, we change the size of the data along various dimensions, and compare results across our 4 models.  
 #' ### Draw a random subset of 20% of your data (or 400 observations, whichever is greater)
-#+ df_mod_20pct, echo=true
+#+ df_mod_20pct, echo=TRUE
 df_mod_20pct <- df_mod %>% 
   dplyr::sample_frac(.2) %>% setDT()
 
@@ -836,7 +836,7 @@ kable_styling(kable(mse_summary,  "html", digits = 5,
                     caption="Estimate loss: comparison across methods"),
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
-#+ echo=true
+#+ echo=TRUE
 rloss_long <- mse %>% pivot_longer(cols = everything())
 
 ggplot(rloss_long,aes(x=value)) + 
@@ -844,7 +844,7 @@ ggplot(rloss_long,aes(x=value)) +
   facet_grid(rows  = vars(name))   
 
 #' ### Subset the data such that there are exactly the same number of treated and control units
-#+ df_mod_ctrl_treat_balance, echo=true
+#+ df_mod_ctrl_treat_balance, echo=TRUE
 # Calculate number of treated and control units
 n_ctrl <- df_mod[W==0,.N]
 n_treat <- df_mod[W==1,.N]
@@ -864,14 +864,14 @@ kable_styling(kable(mse_summary,  "html", digits = 5,
                     caption="Estimate loss: comparison across methods"),
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
-#+ echo=true
+#+ echo=TRUE
 rloss_long <- mse %>% pivot_longer(cols = everything())
 
 ggplot(rloss_long,aes(x=value)) + 
   geom_histogram() + 
   facet_grid(rows  = vars(name))   
 #' ### Subset the data such that there are 5x more control units than treated units 
-#+ df_mod_more_ctrl, echo=true
+#+ df_mod_more_ctrl, echo=TRUE
 
 df_mod_ctrl <- df_mod[W==0]
 df_mod_treat <- df_mod[W==1] %>% sample_n(n_ctrl / 5) %>% setDT()
@@ -889,7 +889,7 @@ kable_styling(kable(mse_summary,  "html", digits = 5,
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
 
-#+ echo=true
+#+ echo=TRUE
 rloss_long <- mse %>% pivot_longer(cols = everything())
 
 ggplot(rloss_long,aes(x=value)) + 
@@ -899,7 +899,7 @@ ggplot(rloss_long,aes(x=value)) +
 #### QUESTION 3 ####
 #' ### Question 3: Heterogeneous Treatment Effects in Randomized Experiments
 #' First split data into 
-#+ echo=true
+#+ echo=TRUE
 library(causalTree)
 library(gt)
 
@@ -915,7 +915,7 @@ nrow(df_tr) + nrow(df_est) + nrow(df_test)
 
 fmla_ct <- paste("factor(Y) ~", paste(covariate_names, collapse = " + "))
 
-#+ causal_tree, echo=true
+#+ causal_tree, echo=TRUE
 ct_unpruned <- honest.causalTree(
   formula=fmla_ct,            # Define the model
   data=df_tr,              # Subset used to create tree structure
