@@ -689,6 +689,7 @@ blp.summary[, 4] <- ifelse(blp.summary[, 3] < 0, 1 - blp.summary[, 4] / 2, blp.s
 
 tc1
 tc2
+
 #' We see that the $\alpha$ is close to 1 under both $\tau$, so in either case the average prediction from the forest is correct. 
 #' From the tutorial we see that we should not interpret the coefficient on $\beta$ in the second case as it is negative, but in the first we capture some of the heterogeneity in the data. 
 
@@ -811,6 +812,12 @@ kable_styling(kable(mse_summary,  "html", digits = 5,
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
 
+#+ echo=true
+rloss_long <- mse %>% pivot_longer(cols = everything())
+
+ggplot(rloss_long,aes(x=value)) + 
+  geom_histogram() + 
+  facet_grid(rows  = vars(name))   
 #' ## Changing Size of Datasets
 #' In this section, we change the size of the data along various dimensions, and compare results across our 4 models.  
 #' ### Draw a random subset of 20% of your data (or 400 observations, whichever is greater)
@@ -829,6 +836,12 @@ kable_styling(kable(mse_summary,  "html", digits = 5,
                     caption="Estimate loss: comparison across methods"),
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
+#+ echo=true
+rloss_long <- mse %>% pivot_longer(cols = everything())
+
+ggplot(rloss_long,aes(x=value)) + 
+  geom_histogram() + 
+  facet_grid(rows  = vars(name))   
 
 #' ### Subset the data such that there are exactly the same number of treated and control units
 #+ df_mod_ctrl_treat_balance, echo=true
@@ -851,7 +864,12 @@ kable_styling(kable(mse_summary,  "html", digits = 5,
                     caption="Estimate loss: comparison across methods"),
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
+#+ echo=true
+rloss_long <- mse %>% pivot_longer(cols = everything())
 
+ggplot(rloss_long,aes(x=value)) + 
+  geom_histogram() + 
+  facet_grid(rows  = vars(name))   
 #' ### Subset the data such that there are 5x more control units than treated units 
 #+ df_mod_more_ctrl, echo=true
 
@@ -870,6 +888,13 @@ kable_styling(kable(mse_summary,  "html", digits = 5,
                     caption="Estimate loss: comparison across methods"),
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
+
+#+ echo=true
+rloss_long <- mse %>% pivot_longer(cols = everything())
+
+ggplot(rloss_long,aes(x=value)) + 
+  geom_histogram() + 
+  facet_grid(rows  = vars(name))   
 
 #### QUESTION 3 ####
 #' ### Question 3: Heterogeneous Treatment Effects in Randomized Experiments
