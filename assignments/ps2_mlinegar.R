@@ -704,7 +704,7 @@ tc2
 #' # For this part, we include the artificial confounding from the first problem set in `df_mod`
 #' ### S-learner
 #' We first examine the S-learner, which is a single random forest, fitted to all of the data. 
-#' We estimate $\hat\tau = $\hat\mu((x,1)) - \hat\mu((x,0))$.  
+#' We estimate $\hat{\tau}=\hat{\mu}((x,1))-\hat{\mu}((x,0))$.  
 #+ echo=TRUE
 
 # from lecture
@@ -753,7 +753,7 @@ t_learner <- function(df_mod){
 # t_learner(df_mod)
 
 #' ### X-learner
-#' We now estimate $\hat\tau$ using the X-learner, which
+#' We now estimate $\hat{\tau}$ using the X-learner, which
 #+ echo=TRUE
 x_learner <- function(df_mod){
   Xmod = df_mod[,.SD, .SDcols = names(df_mod)[!names(df_mod) %in% c("Y", "W")]] %>% as.matrix()
@@ -779,7 +779,7 @@ x_learner <- function(df_mod){
 # x_learner(df_mod)
 
 #' ### Causal Forest
-#' Finally, we estimate $\hat\tau$ with a causal forest. 
+#' Finally, we estimate $\hat{\tau}$ with a causal forest. 
 #+ echo=TRUE
 
 cf_learner <- function(df_mod){
@@ -914,7 +914,7 @@ library(gt)
 
 df <- df %>% mutate(id = row_number())
 #Create training set
-df_tr <- df %>% sample_frac(.40)
+df_tr <- df %>% sample_frac(.50)
 df_split  <- anti_join(df, df_tr, by = 'id')
 df_est <- df_split %>% sample_frac(.50)
 df_test <- anti_join(df_split, df_est, by = 'id')
@@ -994,7 +994,7 @@ gt(estimates,rowname_col = "row_names")  %>%
 #### 90% ####
 #' First 90% of the data
 df_90 <- df %>% sample_frac(.90)
-df_tr <- df_90 %>% sample_frac(.40)
+df_tr <- df_90 %>% sample_frac(.50)
 df_split  <- anti_join(df, df_tr, by = 'id')
 cf <- causal_forest(
   X = as.matrix(df_tr[,covariate_names]),
@@ -1112,7 +1112,7 @@ df_eval[,c(var_of_interest,"tauhat","se")] %>% gt() %>%
 #### 70% ####
 #' Now 70% of the data
 df_70 <- df %>% sample_frac(.70)
-df_tr <- df_70 %>% sample_frac(.40)
+df_tr <- df_70 %>% sample_frac(.50)
 df_split  <- anti_join(df, df_tr, by = 'id')
 cf <- causal_forest(
   X = as.matrix(df_tr[,covariate_names]),
@@ -1230,7 +1230,7 @@ df_eval[,c(var_of_interest,"tauhat","se")] %>% gt() %>%
 #### 50% ####
 #' Finally 50% of the data
 df_50 <- df %>% sample_frac(.50)
-df_tr <- df_50 %>% sample_frac(.40)
+df_tr <- df_50 %>% sample_frac(.50)
 df_split  <- anti_join(df, df_tr, by = 'id')
 cf <- causal_forest(
   X = as.matrix(df_tr[,covariate_names]),
