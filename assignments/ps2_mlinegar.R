@@ -4,13 +4,12 @@
 #' toc: true
 #' toc_depth: 2
 #' always_allow_html: true
-#' includes:
+#' output:
 #'   pdf_document:
 #'     number_sections: true
 #'     df_print: paged
-#'     toc: yes
+#'     toc: true
 #'     toc_depth: 2
-#'     toc_float: true
 #' ---
 #### SETUP ####
 #' echo=TRUE
@@ -311,7 +310,8 @@ if (dataset_name == "social") {
 }
 
 #### SETUP TEXT ####
-#' # Part One  
+#' # Setup
+#' This section is exactly the same as in the first problem set.   
 #' This problem set examines the `r dataset_name` data set. Throughout, the treatment variable will be referred to as `r toupper(treatment_variable_name)` and the outcome variable will be referred to as `r toupper(outcome_variable_name)`.   
 #' Note that models with the suffix `.int` refer to our interacted data; we work with this expanded dataset to demonstrate the usefulness of machine learning methods in higher dimensions.  
 
@@ -417,7 +417,7 @@ tauhat_lin_logistic_aipw <- aipw_ols(df_mod, pW_logistic)
 # tauhat_lin_logistic_aipw 
 
 #### Q1 SIMULATION ####
-#' # Problem 1
+#' # Part I
 #' ## CATE Simulation
 #' We first run the following simulation:
 #+ echo=TRUE
@@ -640,8 +640,10 @@ cf_cor_storage %>% summary()
 aipw_cor_storage %>% summary()
 
 #' Again, we summarize the means over each variable over all simulations by `ntile`. 
-#' This time we see a high degree of correlation between `ntile`, `avg_cf_cate`, and  `aipw_estimate`, 
-#' and that our estimates of $\tau$ are badly biased, and outside our confidence intervals for our AIPW estimates.  
+#' This time we see a high degree of correlation between `ntile` and `avg_cf_cate`, 
+#' while the correlation between `ntile` and `aipw_estimate` is centered closer to zero.  
+#' Our estimates of $\tau$ are biased and outside the confidence interval implied by the standard errors for `avg_cf_cate`, 
+#' while our AIPW estimates accurately capture our estimates for each quartile.  
 #+ echo=TRUE
 sim_df_qtile_storage[,lapply(.SD, mean), .(ntile)]
 
@@ -692,16 +694,21 @@ tc1
 tc2
 
 #' We see that the $\alpha$ is close to 1 under both $\tau$, so in either case the average prediction from the forest is correct. 
-#' From the tutorial we see that we should not interpret the coefficient on $\beta$ in the second case as it is negative, but in the first we capture some of the heterogeneity in the data. 
-
-#' ### Recommended Best Practices
+#' From the tutorial we see that we should not interpret the coefficient on $\beta$ if it is negative. 
+#' Here we do not have to worry about that, and in the second simulation our $\beta$ is much closer to 1, hence we capture more of the heterogeneity in the data under the second simulation than the first. 
+#' This may be because there was little heterogeneity under the first simulation to begin with.   
 #' 
+#' ## Recommended Best Practices   
+#' When researchers want to create subgroups based on the magnitude of the estimated CATE, 
+#' I would recommend using AIPW methods to estimate the CATE in forming these subgroups. 
+#' Over all quartiles across both simulations, AIPW methods were closer to the actual subgroup CATE, and the actual effect was always within the confidence intervals implied standard errors. 
 
 #### Q2 Heterogeneous Treatment Effects in Observational Studies ####
 #' # Heterogeneous Treatment Effects in Observational Studies 
 #' 
-#' ## Different random forest based strategies for estimation heterogeneous treatment effects
-#' # For this part, we include the artificial confounding from the first problem set in `df_mod`
+#' ## Random forest based strategies for estimation heterogeneous treatment effects
+#' For this part, we include the artificial confounding from the first problem set in `df_mod`.  
+#' 
 #' ### S-learner
 #' We first examine the S-learner, which is a single random forest, fitted to all of the data. 
 #' We estimate $\hat{\tau}=\hat{\mu}((x,1))-\hat{\mu}((x,0))$.  
@@ -753,7 +760,7 @@ t_learner <- function(df_mod){
 # t_learner(df_mod)
 
 #' ### X-learner
-#' We now estimate $\hat{\tau}$ using the X-learner, which
+#' We now estimate $\hat{\tau}$ using the X-learner. 
 #+ echo=TRUE
 x_learner <- function(df_mod){
   Xmod = df_mod[,.SD, .SDcols = names(df_mod)[!names(df_mod) %in% c("Y", "W")]] %>% as.matrix()
@@ -809,12 +816,14 @@ mse_1 <- data.frame(
   S_Learner_Loss = (Y_star - s_learner(df_mod))^2,
   T_Learner_Loss = (Y_star - s_learner(df_mod))^2)
 mse_summary_1 <- describe(mse_1)[, c('mean', 'se')]
-#+ results='asis'
+#+ 
 kable_styling(kable(mse_summary_1,  "html", digits = 5,
                     caption="Estimate loss: comparison across methods"),
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
               full_width=FALSE)
 
+#' We now plot R-loss for each learner. We see that they all perform similarly. 
+#' This may be because we are working with a fully randomized experiment, and our confounding did not introduce enough bias.  
 #+ echo=TRUE
 rloss_long <- mse_1 %>% pivot_longer(cols = everything())
 
@@ -836,7 +845,8 @@ mse_2 <- data.frame(
   S_Learner_Loss = (Y_star - s_learner(df_mod_20pct))^2,
   T_Learner_Loss = (Y_star - s_learner(df_mod_20pct))^2)
 mse_summary_2 <- describe(mse_2)[, c('mean', 'se')]
-#+ results='asis'
+#' Again, we see that all methods perform similarly well.  
+#+ 
 kable_styling(kable(mse_summary_2,  "html", digits = 5,
                     caption="Estimate loss: comparison across methods"),
               bootstrap_options=c("striped", "hover", "condensed", "responsive"),
@@ -905,9 +915,15 @@ ggplot(rloss_long,aes(x=value)) +
   geom_histogram() + 
   facet_grid(rows  = vars(name))   
 
+#' ### Overview
+#' Overall, we see that all methods perform comparably well, regardless of the size of the data we use.  
+
+#' \newpage 
 #### QUESTION 3 ####
-#' ### Question 3: Heterogeneous Treatment Effects in Randomized Experiments
-#' First split data into 
+#' # Part 3: Heterogeneous Treatment Effects in Randomized Experiments
+#' ## Data Definition
+#' For this section, we return to `df`, our original, unaltered dataset. 
+#' We use random sampling to divide the dataset into three datasets, call them df_tr, df_est, and df_test as in the tutorial.
 #+ echo=TRUE
 library(causalTree)
 library(gt)
@@ -924,6 +940,9 @@ nrow(df_tr) + nrow(df_est) + nrow(df_test)
 
 fmla_ct <- paste("factor(Y) ~", paste(covariate_names, collapse = " + "))
 
+#' ## Honest Causal Tree
+#' We now create a factor variable for the leaves in samples df_tr, df_est and df_test, and run linear regressions that estimate the treatment effect magnitudes and standard errors for each leaf in each sample.  
+#' Our code follows that from the tutorial.  
 #+ causal_tree, echo=TRUE
 ct_unpruned <- honest.causalTree(
   formula=fmla_ct,            # Define the model
@@ -977,22 +996,20 @@ gt(estimates,rowname_col = "row_names")  %>%
              V4 = "df_tr") %>%
   as_latex()
 
+#### Partial dependence plots ####
 #' ### Partial Dependence Plots
-
-
-#### Partial dependence plots
-
-#' Directly from tutorial:
+#' All code here follows directly from tutorial.  
 #' 
 #' It may also be interesting to examine how our CATE estimates behave when we change a single covariate, while keeping all the other covariates at a some fixed value. In the plot below we evaluate a variable of interest across quantiles, while keeping all other covariates at their median (see the RMarkdown source for code).  
-
-
-#' **Note:** It is important to recognize that in the following plots and tables, we may be evaluating the CATE at $x$ values in regions where there are few or no data points. Also, it may be the case that varying some particular variable while keeping others fixed may just not be very interesting. For example, in the _welfare_ dataset, we will not see a lot difference when we change `partyid` if we keep `polviews` fixed at their median value. It might be instructive to re-run this tutorial without using the variable `partyid`.
-
-
+#' **Note:** It is important to recognize that in the following plots and tables, we may be evaluating the CATE at $x$ values in regions where there are few or no data points. Also, it may be the case that varying some particular variable while keeping others fixed may just not be very interesting. 
+#' For example, in the _welfare_ dataset (the dataset we used last problem set!), we will not see a lot difference when we change `partyid` if we keep `polviews` fixed at their median value. It might be instructive to re-run this tutorial without using the variable `partyid`.
 
 #### 90% ####
-#' First 90% of the data
+#' ### 90% of Data
+#' First we use 90% of the data and examine CATE estimates. 
+#' We see that there is some movement in the mean CATE across age groups, but they are all essentially the same. 
+#' We observe a similar pattern across `hrs1`, our other covariate we use to form subgroups.  
+#+ echo=TRUE
 df_90 <- df %>% sample_frac(.90)
 df_tr <- df_90 %>% sample_frac(.50)
 df_split  <- anti_join(df, df_tr, by = 'id')
@@ -1037,8 +1054,7 @@ df_eval[, var_of_interest] <- as.factor(round(df_grid[, var_of_interest], digits
 # Descriptive labeling
 label_description <- ifelse(is_continuous, '\n(Evaluated at quintiles)', '')
 
-#' Now we plot
-#+
+#+ echo=TRUE
 # Plot
 df_eval %>%
   mutate(ymin_val = tauhat-1.96*se) %>%
@@ -1055,8 +1071,8 @@ df_eval %>%
 df_eval[,c(var_of_interest,"tauhat","se")] %>% gt() %>%
   as_latex()
 
-#' Now for another variable:
-#+
+#' Now for `hrs1`. This code exactly mirrors that above, so we omit it.  
+#+ 
 if (dataset_name == "welfare") {
   var_of_interest = "hrs1"
 } else {
@@ -1093,7 +1109,7 @@ df_eval[, var_of_interest] <- as.factor(round(df_grid[, var_of_interest], digits
 # Descriptive labeling
 label_description <- ifelse(is_continuous, '\n(Evaluated at quintiles)', '')
 
-#' Plot
+#' 
 #+
 df_eval %>%
   mutate(ymin_val = tauhat-1.96*se) %>%
@@ -1110,7 +1126,9 @@ df_eval[,c(var_of_interest,"tauhat","se")] %>% gt() %>%
   as_latex()
 
 #### 70% ####
-#' Now 70% of the data
+#' \newpage
+#' ### 70% of Data
+#' Now we reduce to 70% of the data. Our results are similar as with 90%. 
 df_70 <- df %>% sample_frac(.70)
 df_tr <- df_70 %>% sample_frac(.50)
 df_split  <- anti_join(df, df_tr, by = 'id')
@@ -1155,7 +1173,6 @@ df_eval[, var_of_interest] <- as.factor(round(df_grid[, var_of_interest], digits
 # Descriptive labeling
 label_description <- ifelse(is_continuous, '\n(Evaluated at quintiles)', '')
 
-#' Now we plot
 #+
 # Plot
 df_eval %>%
@@ -1173,7 +1190,7 @@ df_eval %>%
 df_eval[,c(var_of_interest,"tauhat","se")] %>% gt() %>%
   as_latex()
 
-#' Now for another variable:
+#'
 #+
 if (dataset_name == "welfare") {
   var_of_interest = "hrs1"
@@ -1211,7 +1228,6 @@ df_eval[, var_of_interest] <- as.factor(round(df_grid[, var_of_interest], digits
 # Descriptive labeling
 label_description <- ifelse(is_continuous, '\n(Evaluated at quintiles)', '')
 
-#' Plot
 #+
 df_eval %>%
   mutate(ymin_val = tauhat-1.96*se) %>%
@@ -1228,7 +1244,8 @@ df_eval[,c(var_of_interest,"tauhat","se")] %>% gt() %>%
   as_latex()
 
 #### 50% ####
-#' Finally 50% of the data
+#' ### 50% of Data
+#' Finally we use only 50% of the data. Again, our estimates are steady across subgroups. 
 df_50 <- df %>% sample_frac(.50)
 df_tr <- df_50 %>% sample_frac(.50)
 df_split  <- anti_join(df, df_tr, by = 'id')
@@ -1291,7 +1308,7 @@ df_eval %>%
 df_eval[,c(var_of_interest,"tauhat","se")] %>% gt() %>%
   as_latex()
 
-#' Now for another variable:
+#' 
 #+
 if (dataset_name == "welfare") {
   var_of_interest = "hrs1"
@@ -1329,7 +1346,7 @@ df_eval[, var_of_interest] <- as.factor(round(df_grid[, var_of_interest], digits
 # Descriptive labeling
 label_description <- ifelse(is_continuous, '\n(Evaluated at quintiles)', '')
 
-#' Plot
+#' 
 #+
 df_eval %>%
   mutate(ymin_val = tauhat-1.96*se) %>%
@@ -1345,3 +1362,9 @@ df_eval %>%
 df_eval[,c(var_of_interest,"tauhat","se")] %>% gt() %>%
   as_latex()
 
+#' ### Review of Results
+#' Overall, we see very consistent estimates of the CATE over all subgroups, regardless of which variable we use to split. 
+#' Our results are robust to using as little as 50% of our data. 
+#' Overall, we should feel very confident in our estimates of the CATE for this experiment.  
+#' 
+#' 
