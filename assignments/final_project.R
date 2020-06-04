@@ -18,7 +18,8 @@
 local_dir <- "~/Dropbox/Athey/sherlock_oak" # points to  /oak/stanford/groups/athey/Stones2Milestones
 data_dir <- sprintf("%s/basic_rec_system/obs_study", local_dir)
 
-outcome_family <- "binomial" # based on whether your outcome is binary or not; input to glm call
+outcome_family <- outcome_family # based on whether your outcome is binary or not; input to glm call
+outcome_family <- "gaussian" # if outcome not binary
 outcome_type <- "class"
 n_sims <- 20
 prop_to_keep <- 1.0 # if you want to only run on a random sample of the data, if want to run on full data set to 1.0
@@ -248,12 +249,12 @@ Wmod = df_mod$W
 #' As a first step, we plot logistic predictions of the probabilities our treatment $pW$ and our outcome $pY$ (which is binary). 
 #' We see that treatment assignment appears to follow a normal distribution, and that our outcome has an average unconditional probability of  `r mean(Ymod)`.  
 #+ echo=TRUE
-pW_logistic.fit <- glm(Wmod ~ as.matrix(Xmod), family = "binomial")
+pW_logistic.fit <- glm(Wmod ~ as.matrix(Xmod), family = outcome_family)
 pW_logistic <- predict(pW_logistic.fit, type = "response")
 pW_logistic.fit.tidy <-  pW_logistic.fit %>% tidy()
 hist(pW_logistic)
 
-pY_logistic.fit <- glm(Ymod ~ as.matrix(Xmod), family = "binomial")
+pY_logistic.fit <- glm(Ymod ~ as.matrix(Xmod), family = outcome_family)
 pY_logistic <- predict(pY_logistic.fit, type = "response")
 pY_logistic.fit.tidy <-  pY_logistic.fit %>% tidy()
 hist(pY_logistic)
@@ -288,7 +289,7 @@ Wmod = df_mod$W
 XWmod = cbind(Xmod, Wmod)
 
 # Computing the propensity score by logistic regression of W on X.
-pW_logistic.fit <- glm(Wmod ~ as.matrix(Xmod), family = "binomial")
+pW_logistic.fit <- glm(Wmod ~ as.matrix(Xmod), family = outcome_family)
 pW_logistic <- predict(pW_logistic.fit, type = "response")
 
 df_mod[, logistic_propensity := pW_logistic]
@@ -320,7 +321,7 @@ overlap
 
 # logistic model
 # original data
-pW_logistic.fit <- glm(Wmod ~ Xmod, family = "binomial")
+pW_logistic.fit <- glm(Wmod ~ Xmod, family = outcome_family)
 pW_logistic <- predict(pW_logistic.fit, type = "response")
 
 # original data
@@ -329,7 +330,7 @@ pY_logistic <- predict(pY_logistic.fit, type = "response")
 
 # lasso expanded data, code provided by TA
 # original data
-pW_glmnet.fit.model = glmnet::cv.glmnet(Xmod, Wmod, lambda = lambda, family = "binomial", type.measure = "class", keep=TRUE) 
+pW_glmnet.fit.model = glmnet::cv.glmnet(Xmod, Wmod, lambda = lambda, family = outcome_family, type.measure = "class", keep=TRUE) 
 pY_glmnet.fit.model = glmnet::cv.glmnet(Xmod, Ymod, lambda = lambda, family = outcome_family, type.measure = outcome_type, keep=TRUE) 
 # expanded data
 
