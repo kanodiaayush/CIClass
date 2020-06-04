@@ -215,6 +215,8 @@ loglike <- function(pred, data){
 
 df <- fread(sprintf("%s/utility_dataset.csv", data_dir))
 
+covariate_names <- colnames(df)[!colnames(df) %in% c("W", "Y")]
+
 #### DATA WORK ####
 # Drop rows containing missing values
 df <- na.omit(df)
@@ -231,3 +233,244 @@ setDT(df)
 #+ echo=TRUE
 tauhat_rct <- difference_in_means(df)
 print(tauhat_rct)
+
+#### TESTING ASSUMPTIONS ####
+#' ## Testing Assumptions
+#' Here we test some of our traditional causal inference assumptions. 
+#+ echo=FALSE
+df_mod = copy(df)
+setDT(df_mod)
+Xmod = df_mod[,covariate_names, with=FALSE]
+Ymod = df_mod$Y
+Wmod = df_mod$W
+
+#' \newpage
+#' As a first step, we plot logistic predictions of the probabilities our treatment $pW$ and our outcome $pY$ (which is binary). 
+#' We see that treatment assignment appears to follow a normal distribution, and that our outcome has an average unconditional probability of  `r mean(Ymod)`.  
+#+ echo=TRUE
+pW_logistic.fit <- glm(Wmod ~ as.matrix(Xmod), family = "binomial")
+pW_logistic <- predict(pW_logistic.fit, type = "response")
+pW_logistic.fit.tidy <-  pW_logistic.fit %>% tidy()
+hist(pW_logistic)
+
+pY_logistic.fit <- glm(Ymod ~ as.matrix(Xmod), family = "binomial")
+pY_logistic <- predict(pY_logistic.fit, type = "response")
+pY_logistic.fit.tidy <-  pY_logistic.fit %>% tidy()
+hist(pY_logistic)
+
+df_mod[, `:=`(p_Y = pY_logistic,
+              p_W = pW_logistic)]
+
+#' Some summary statistics of our data:
+#+ results='asis'
+stargazer(df_mod, header=FALSE)
+
+#' We now produce a plot comparing predicted and actual treatment assignment. 
+#' This plot is provided mostly for comparison (this is the plot the tutorial has);
+#' future plots of this nature will be done with `ggplot` to make their options more explicit.  
+#+ echo=TRUE
+{plot(smooth.spline(pW_logistic, Wmod, df = 4))
+  abline(0, 1)}
+
+#### RCT ANALYSIS ####
+#' ## RCT Analysis
+#' We now report the (presumably true) treatment effect $\hat{\tau}$ from the randomized experiment:  
+#+ echo=TRUE
+tauhat_rct <- difference_in_means(df)
+print(tauhat_rct)
+
+#### LOGISTIC PROPENSITY SCORES ####
+#+ echo=TRUE
+# df_mod <- copy(df)
+Xmod = df_mod[,.SD, .SDcols = names(df_mod)[!names(df_mod) %in% c("Y", "W")]] %>% as.matrix()
+Ymod = df_mod$Y
+Wmod = df_mod$W
+XWmod = cbind(Xmod, Wmod)
+
+# Computing the propensity score by logistic regression of W on X.
+pW_logistic.fit <- glm(Wmod ~ as.matrix(Xmod), family = "binomial")
+pW_logistic <- predict(pW_logistic.fit, type = "response")
+
+df_mod[, logistic_propensity := pW_logistic]
+
+#### OVERLAP ####
+#' We now plot (logistic) propensity scores, showing that we still have overlap after removing observations. 
+#' We may be somewhat concerned about the small number of observations with propensities close to one;
+#' so remove all observations with propensity score outside of `r propensity_bound[1]` and `r propensity_bound[2]` to fix this. 
+#' We then re-estimate the propensity model.  
+#' We first show overlap before truncating.  
+#+ echo=TRUE
+overlap <- df_mod %>% ggplot(aes(x=logistic_propensity,color=as.factor(W),fill=as.factor(W)))+ geom_histogram()
+overlap
+
+#' We now truncate, and plot truncated overlap. 
+#+ echo=TRUE
+df_mod <- df_mod[logistic_propensity %between% propensity_bound]
+
+Xmod = df_mod[,.SD, .SDcols = names(df_mod)[!names(df_mod) %in% c("Y", "W")]] %>% as.matrix()
+Ymod = df_mod$Y
+Wmod = df_mod$W
+XWmod = cbind(Xmod, Wmod)
+
+overlap <- df_mod %>% ggplot(aes(x=logistic_propensity,color=as.factor(W),fill=as.factor(W)))+ geom_histogram()
+overlap
+
+#### PREDICTING PROPENSITIES AND OUTCOMES, ORIGINAL AND EXPANDED DATA ####
+# some of this is used to calculate bias function, hence the ordering
+
+# logistic model
+# original data
+pW_logistic.fit <- glm(Wmod ~ Xmod, family = "binomial")
+pW_logistic <- predict(pW_logistic.fit, type = "response")
+
+# original data
+pY_logistic.fit <- glm(Ymod ~ XWmod, family = outcome_family)
+pY_logistic <- predict(pY_logistic.fit, type = "response")
+
+# lasso expanded data, code provided by TA
+# original data
+pW_glmnet.fit.model = glmnet::cv.glmnet(Xmod, Wmod, lambda = lambda, family = "binomial", type.measure = "class", keep=TRUE) 
+pY_glmnet.fit.model = glmnet::cv.glmnet(Xmod, Ymod, lambda = lambda, family = outcome_family, type.measure = outcome_type, keep=TRUE) 
+# expanded data
+
+# demonstration of lasso fit across lambdas:
+pW_lasso = pW_glmnet.fit.model$fit.preval[, pW_glmnet.fit.model$lambda == pW_glmnet.fit.model$lambda.min] %>% convert_to_prob()
+pW_lasso.min = pW_glmnet.fit.model$fit.preval[, pW_glmnet.fit.model$lambda == min(pW_glmnet.fit.model$lambda)] %>% convert_to_prob()
+pW_lasso.max = pW_glmnet.fit.model$fit.preval[, pW_glmnet.fit.model$lambda == max(pW_glmnet.fit.model$lambda)] %>% convert_to_prob()
+pW_lasso.rand = pW_glmnet.fit.model$fit.preval[, pW_glmnet.fit.model$lambda == base::sample(pW_glmnet.fit.model$lambda, 1)] %>% convert_to_prob()
+
+# random forest
+pW_rf.fit = regression_forest(Xmod, Wmod, num.trees = 500)
+pY_rf.fit = regression_forest(Xmod, Ymod, num.trees = 500)
+
+# pW_rf = pW_rf.fit$predictions
+# pY_rf = pY_rf.fit$predictions
+pW_rf = predict(pW_rf.fit, newdata = Xmod) %>% as.matrix
+pY_rf = predict(pY_rf.fit, newdata = Xmod) %>% as.matrix
+
+# CF
+cf = causal_forest(Xmod, Ymod, Wmod, num.trees = 500)
+
+#### BIAS FUNCTION ####
+#' Next we plot the bias function $b(X)$ following Athey, Imbens, Pham and Wager (AER P&P, 2017, Section IIID). 
+#' We plot $b(x)$ for all units in the sample, and see that the bias seems evenly distributed around zero.  
+#' We see that bias for most observations is close to zero.  
+#+ echo=TRUE
+
+mu_avg <- function(treated, df){df[W==treated, mean(Y)]}
+mu <- function(treated, df){df[W==treated, mean(pY)]}
+
+B <- function(df, treatment_model, outcome_model, outcome_type = "response"){
+  # have to supply models so that can estimate counterfactual predictions given an alternative treatment assignment
+  # note that this will NOT work for lasso model, attempt to warn of this misbehavior:
+  if (grepl("lasso|rf|cf", deparse(quote(treatment_model)))){
+    simpleMessage("The predict method appears to be broken for lasso models estimated using glmnet::cv.glmnet.
+                  You may want to try another predictive model.")
+  }
+  df = copy(df)
+  p = df[,mean(W)]
+  mu0 <- df[W==0,mean(Y)]
+  mu1 <- df[W==1,mean(Y)]
+  
+  pY_w0 <- predict(outcome_model, newdata = df[,.SD, .SDcols = !c('W', 'Y')][, W := 0], type = outcome_type)
+  pY_w1 <- predict(outcome_model, newdata = df[,.SD, .SDcols = !c('W', 'Y')][, W := 1], type = outcome_type)
+  pW <- predict(treatment_model, newdata = df[,.SD, .SDcols = !c('W', 'Y')], type = "response")
+  df[, `:=`(W = NULL, pY_w0 = pY_w0, pY_w1 = pY_w1, pW = pW)]
+  
+  
+  df[, b := (pW - p) * (p * (pY_w0 - mu0) + (1 - p) * (pY_w1 - mu1))]
+  
+  return(df[,.(b)])
+}
+
+df_mod_bias <- B(df_mod, pW_logistic.fit, pY_logistic.fit)
+ggplot(df_mod_bias, aes(x = b)) + geom_histogram() + labs(title = "Histogram of per-observation b(x)")
+
+#### ESTIMATING ATE INTRO ####
+#' \newpage
+#' ## Estimating the ATE  
+#' In this section we explore various methods for estimating the ATE. We explore the following methods:  
+#' 1. inverse propensity weighting via logistic regression  
+#' 2. direct regression analysis via OLS  
+#' 3. traditional double robust analysis via augmented inverse-propensity score weighting that combines the above two estimators.  
+#' We also re-run the above methods after expanding the data to include all interactions of all of the covariates, 
+#' and re-estimate outcome and proensity models using the original linear model, as well as running lasso and random forest models on the expanded data. 
+
+#### ATE CALCULATIONS: ORIGINAL DATA ####
+
+# linear models
+tauhat_ols <- ate_condmean_ols(df_mod)
+
+# linear models
+tauhat_logistic_ipw <- ipw(df_mod, pW_logistic)
+tauhat_pscore_ols <- prop_score_ols(df_mod, pW_logistic)
+tauhat_lin_logistic_aipw <- aipw_ols(df_mod, pW_logistic)
+
+# lasso
+tauhat_lasso_ipw <- ipw(df_mod, pW_lasso)
+tauhat_pscore_lasso <- prop_score_ols(df_mod, pW_lasso)
+tauhat_lasso_logistic_aipw <- aipw_ols(df_mod, pW_lasso)
+# FIXME: add this
+# prior code to add:
+# Xmod.for.lasso = cbind(Wmod, Xmod, (2 * Wmod - 1) * Xmod)
+# glmnet.fit.outcome = amlinear:::crossfit.cv.glmnet(Xmod.for.lasso, Ymod,
+#                                                    penalty.factor = c(0, rep(1, ncol(Xmod.for.lasso) - 1)))
+# lasso.yhat.control = amlinear:::crossfit.predict(glmnet.fit.outcome,
+#                                                  cbind(0, Xmod, -Xmod))
+# lasso.yhat.treated = amlinear:::crossfit.predict(glmnet.fit.outcome,
+#                                                  cbind(1, Xmod, Xmod))
+# The lasso AIPW estimator. Here, the inference is justified via
+# orthogonal moments.
+# G = lasso.yhat.treated - lasso.yhat.control +
+#   Wmod / pW_lasso * (Ymod - lasso.yhat.treated) -
+#   (1 - Wmod) / (1 - pW_lasso) * (Ymod - lasso.yhat.control)
+# tau.hat = mean(G)
+# se.hat = sqrt(var(G) / length(G))
+# tauhat_lasso_aipw = c(ATE=tau.hat,
+#                       lower_ci=tau.hat-1.96*se.hat,
+#                       upper_ci=tau.hat+1.96*se.hat)
+
+# FIXME: add this
+# balancing.weights = amlinear::balance_minimax(Xmod, Wmod, zeta = 0.5)
+# G.balance = lasso.yhat.treated - lasso.yhat.control +
+#   balancing.weights * (Ymod - Wmod * lasso.yhat.treated
+#                        - (1 - Wmod) * lasso.yhat.control)
+# tau.hat = mean(G.balance)
+# se.hat = sqrt(var(G.balance) / length(G.balance))
+# tauhat_lasso_balance = c(ATE=tau.hat,
+#                          lower_ci=tau.hat-1.96*se.hat,
+#                          upper_ci=tau.hat+1.96*se.hat)
+
+# RF
+tauhat_rf_ipw = ipw(df_mod, pW_rf)
+ate_rf_aipw = average_treatment_effect(cf)
+tauhat_rf_aipw = c(ATE=ate_rf_aipw["estimate"],
+                   lower_ci=ate_rf_aipw["estimate"] - 1.96 * ate_rf_aipw["std.err"],
+                   upper_ci=ate_rf_aipw["estimate"] + 1.96 * ate_rf_aipw["std.err"])
+tauhat_ols_rf_aipw = aipw_ols(df_mod, pW_rf)
+
+#### COMPARING ATE ACROSS MODELS ####
+#' ## Comparing ATE Across Models with Original Data
+#' Finally, we compare ATE across various models. We see that AIPW forest methods performs the best across the original and interacted data,
+#' though propensity weighted regression performed on the original data.
+#+ echo=FALSE
+all_estimators = rbind(
+  RCT_gold_standard = tauhat_rct,
+  naive_observational = tauhat_confounded,
+  linear_regression = tauhat_ols,
+  propensity_weighted_regression = tauhat_pscore_ols,
+  IPW_logistic = tauhat_logistic_ipw,
+  AIPW_linear_plus_logistic = tauhat_lin_logistic_aipw,
+  IPW_forest = tauhat_rf_ipw,
+  AIPW_forest = tauhat_rf_aipw,
+  AIPW_linear_plus_forest = tauhat_ols_rf_aipw,
+  IPW_lasso = tauhat_lasso_ipw#,
+  # FIXME: add this above
+  # AIPW_lasso = tauhat_lasso_aipw,
+  # FIXME: add this above
+  # approx_residual_balance = tauhat_lasso_balance
+)
+all_estimators = data.frame(all_estimators)
+all_estimators$ci_length = all_estimators$upper_ci - all_estimators$lower_ci
+print(round(as.matrix(all_estimators), 3))
+
