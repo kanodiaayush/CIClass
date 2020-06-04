@@ -474,3 +474,206 @@ all_estimators = data.frame(all_estimators)
 all_estimators$ci_length = all_estimators$upper_ci - all_estimators$lower_ci
 print(round(as.matrix(all_estimators), 3))
 
+#### Honest Causal Tree ####
+#' # Part 3: Heterogeneous Treatment Effects in Randomized Experiments
+#' ## Data Definition
+#' For this section, we return to `df`, our original, unaltered dataset. 
+#' We use random sampling to divide the dataset into three datasets, call them df_tr, df_est, and df_test as in the tutorial.
+#+ echo=TRUE
+library(causalTree)
+library(gt)
+
+df <- df %>% mutate(id = row_number())
+#Create training set
+df_tr <- df %>% sample_frac(.50)
+df_split  <- anti_join(df, df_tr, by = 'id')
+df_est <- df_split %>% sample_frac(.50)
+df_test <- anti_join(df_split, df_est, by = 'id')
+#Create test set
+nrow(df)
+nrow(df_tr) + nrow(df_est) + nrow(df_test)
+
+fmla_ct <- paste("factor(Y) ~", paste(covariate_names, collapse = " + "))
+
+#' ## Honest Causal Tree
+#' We now create a factor variable for the leaves in samples df_tr, df_est and df_test, and run linear regressions that estimate the treatment effect magnitudes and standard errors for each leaf in each sample.  
+#' Our code follows that from the tutorial.  
+#+ causal_tree, echo=TRUE
+ct_unpruned <- honest.causalTree(
+  formula=fmla_ct,            # Define the model
+  data=df_tr,              # Subset used to create tree structure
+  est_data=df_est,            # Which data set to use to estimate effects
+  treatment=df_tr$W,       # Splitting sample treatment variable
+  est_treatment=df_est$W,     # Estimation sample treatment variable
+  split.Rule="CT",            # Define the splitting option
+  cv.option="TOT",            # Cross validation options
+  cp=0,                       # Complexity parameter
+  split.Honest=TRUE,          # Use honesty when splitting
+  cv.Honest=TRUE,             # Use honesty when performing cross-validation
+  minsize=15,                 # Min. number of treatment and control cases in each leaf
+  HonestSampleSize=nrow(df_est)) # Num obs used in estimation after building the tree
+# Table of cross-validated values by tuning parameter.
+ct_cptable <- as.data.frame(ct_unpruned$cptable)
+# Obtain optimal complexity parameter to prune tree.
+selected_cp <- which.min(ct_cptable$xerror)
+optim_cp_ct <- ct_cptable[selected_cp, "CP"]
+# Prune the tree at optimal complexity parameter.
+ct_pruned <- prune(tree=ct_unpruned, cp=optim_cp_ct)
+tauhat_ct_est <- predict(ct_pruned, newdata=df_est)
+tauhat_ct_test <- predict(ct_pruned, newdata=df_test)
+tauhat_ct_tr <- predict(ct_pruned, newdata=df_tr)
+# Create a factor column 'leaf' indicating leaf assignment
+num_leaves <- length(unique(tauhat_ct_est))  # There are as many leaves as there are predictions
+df_est$leaf <- factor(tauhat_ct_est, labels = seq(num_leaves))
+df_test$leaf <- factor(tauhat_ct_test, labels = seq(num_leaves))
+df_tr$leaf <- factor(tauhat_ct_tr, labels = seq(num_leaves))
+# Run the regression
+ols_ct_est <- lm_robust(Y ~ 0 + leaf + W:leaf, data=df_est)
+ols_ct_test <- lm_robust(Y ~ 0 + leaf + W:leaf, data=df_test)
+ols_ct_tr <- lm_robust(Y ~ 0 + leaf + W:leaf, data=df_tr)
+ols_ct_summary_est <- summary(ols_ct_est)
+ols_ct_summary_test <- summary(ols_ct_test)
+ols_ct_summary_tr <- summary(ols_ct_tr)
+te_summary_est <- coef(ols_ct_summary_est)[(num_leaves+1):(2*num_leaves), c("Estimate")] %>% round(3)
+te_summary_test <- coef(ols_ct_summary_test)[(num_leaves+1):(2*num_leaves), c("Estimate")] %>% round(3)
+te_summary_tr <- coef(ols_ct_summary_tr)[(num_leaves+1):(2*num_leaves), c("Estimate")] %>% round(3)
+te_summary_est_se <- coef(ols_ct_summary_est)[(num_leaves+1):(2*num_leaves), c( "Std. Error")] %>% round(3)
+te_summary_test_se <- coef(ols_ct_summary_test)[(num_leaves+1):(2*num_leaves), c( "Std. Error")] %>% round(3)
+te_summary_tr_se <- coef(ols_ct_summary_tr)[(num_leaves+1):(2*num_leaves),c("Std. Error")] %>% round(3)
+row_names <-  sprintf("Leaf %d",1:num_leaves)
+estimates <- cbind(row_names,paste0(te_summary_est,"(",te_summary_est_se,")"),paste0(te_summary_test,"(",te_summary_test_se,")"), paste0(te_summary_tr,"(",te_summary_tr_se,")")) %>% as.data.frame()
+gt(estimates,rowname_col = "row_names")  %>%  
+  tab_header(
+    title = md("Per Leaf ATE"),
+    subtitle = paste0("Updated to ",Sys.Date())) %>%
+  cols_label(V2 = "df_est",
+             V3 = "df_test",
+             V4 = "df_tr") %>%
+  as_latex()
+
+#### Partial dependence plots ####
+#' ### Partial Dependence Plots
+#' All code here follows directly from tutorial.  
+#' 
+#' It may also be interesting to examine how our CATE estimates behave when we change a single covariate, while keeping all the other covariates at a some fixed value. In the plot below we evaluate a variable of interest across quantiles, while keeping all other covariates at their median (see the RMarkdown source for code).  
+#' **Note:** It is important to recognize that in the following plots and tables, we may be evaluating the CATE at $x$ values in regions where there are few or no data points. Also, it may be the case that varying some particular variable while keeping others fixed may just not be very interesting. 
+#' For example, in the _welfare_ dataset (the dataset we used last problem set!), we will not see a lot difference when we change `partyid` if we keep `polviews` fixed at their median value. It might be instructive to re-run this tutorial without using the variable `partyid`.
+
+
+#' We see that there is some movement in the mean CATE across age groups, but they are all essentially the same. 
+#' We observe a similar pattern across `hrs1`, our other covariate we use to form subgroups.  
+#+ echo=TRUE
+df_tr <- df %>% sample_frac(.50)
+df_split  <- anti_join(df, df_tr, by = 'id')
+cf <- causal_forest(
+  X = as.matrix(df_tr[,covariate_names]),
+  Y = df_tr$Y,
+  W = df_tr$W,
+  num.trees=200) 
+if (dataset_name == "welfare") {
+  var_of_interest = "age"
+} else {
+  # Selecting a continuous variable, if available, to make for a more interesting graph
+  continuous_variables <- sapply(covariate_names, function(x) length(unique(df_tr[, x])) > 5)
+  # Select variable for single variable plot
+  var_of_interest <- ifelse(sum(continuous_variables) > 0,
+                            covariate_names[continuous_variables][1],
+                            covariate_names[1])
+  # Select variables for two variable plot
+  vars_of_interest <- c(var_of_interest,
+                        ifelse(sum(continuous_variables) > 1,
+                               covariate_names[continuous_variables][2],
+                               covariate_names[covariate_names != var_of_interest][1]))
+}
+# Create a grid of values: if continuous, quantiles; else, plot the actual values
+is_continuous <- (length(unique(df_tr[,var_of_interest])) > 5) # crude rule for determining continuity
+if(is_continuous) {
+  x_grid <- quantile(df_tr[,var_of_interest], probs = seq(0, 1, length.out = 5))
+} else {
+  x_grid <- sort(unique(df_tr[,var_of_interest]))
+}
+df_grid <- setNames(data.frame(x_grid), var_of_interest)
+# For the other variables, keep them at their median
+other_covariates <- covariate_names[which(covariate_names != var_of_interest)]
+df_median <- data.frame(lapply(df_tr[,other_covariates], median))
+df_eval <- crossing(df_median, df_grid)
+# Predict the treatment effect
+pred <- predict(cf, newdata=df_eval[,covariate_names], estimate.variance=TRUE)
+df_eval$tauhat <- pred$predictions
+df_eval$se <- sqrt(pred$variance.estimates)
+# Change to factor so the plotted values are evenly spaced
+df_eval[, var_of_interest] <- as.factor(round(df_grid[, var_of_interest], digits = 4))
+# Descriptive labeling
+label_description <- ifelse(is_continuous, '\n(Evaluated at quintiles)', '')
+
+#+ echo=TRUE
+# Plot
+df_eval %>%
+  mutate(ymin_val = tauhat-1.96*se) %>%
+  mutate(ymax_val = tauhat+1.96*se) %>%
+  ggplot() +
+  geom_line(aes_string(x=var_of_interest, y="tauhat",group=1), color="red") +
+  geom_errorbar(aes_string(x=var_of_interest,ymin="ymin_val", ymax="ymax_val", width=.2),color="blue") +
+  xlab(paste0("Effect of ", var_of_interest, label_description)) +
+  ylab("Predicted Treatment Effect") +
+  theme_linedraw() +
+  theme(axis.ticks = element_blank())
+
+
+df_eval[,c(var_of_interest,"tauhat","se")] %>% gt() %>%
+  as_latex()
+
+#' Now for `hrs1`. This code exactly mirrors that above, so we omit it.  
+#+ 
+if (dataset_name == "welfare") {
+  var_of_interest = "hrs1"
+} else {
+  # Selecting a continuous variable, if available, to make for a more interesting graph
+  continuous_variables <- sapply(covariate_names, function(x) length(unique(df_tr[, x])) > 5)
+  # Select variable for single variable plot
+  var_of_interest <- ifelse(sum(continuous_variables) > 0,
+                            covariate_names[continuous_variables][1],
+                            covariate_names[1])
+  # Select variables for two variable plot
+  vars_of_interest <- c(var_of_interest,
+                        ifelse(sum(continuous_variables) > 1,
+                               covariate_names[continuous_variables][2],
+                               covariate_names[covariate_names != var_of_interest][1]))
+}
+# Create a grid of values: if continuous, quantiles; else, plot the actual values
+is_continuous <- (length(unique(df_tr[,var_of_interest])) > 5) # crude rule for determining continuity
+if(is_continuous) {
+  x_grid <- quantile(df_tr[,var_of_interest], probs = seq(0, 1, length.out = 5))
+} else {
+  x_grid <- sort(unique(df_tr[,var_of_interest]))
+}
+df_grid <- setNames(data.frame(x_grid), var_of_interest)
+# For the other variables, keep them at their median
+other_covariates <- covariate_names[which(covariate_names != var_of_interest)]
+df_median <- data.frame(lapply(df_tr[,other_covariates], median))
+df_eval <- crossing(df_median, df_grid)
+# Predict the treatment effect
+pred <- predict(cf, newdata=df_eval[,covariate_names], estimate.variance=TRUE)
+df_eval$tauhat <- pred$predictions
+df_eval$se <- sqrt(pred$variance.estimates)
+# Change to factor so the plotted values are evenly spaced
+df_eval[, var_of_interest] <- as.factor(round(df_grid[, var_of_interest], digits = 4))
+# Descriptive labeling
+label_description <- ifelse(is_continuous, '\n(Evaluated at quintiles)', '')
+
+#' 
+#+
+df_eval %>%
+  mutate(ymin_val = tauhat-1.96*se) %>%
+  mutate(ymax_val = tauhat+1.96*se) %>%
+  ggplot() +
+  geom_line(aes_string(x=var_of_interest, y="tauhat", group = 1), color="red") +
+  geom_errorbar(aes_string(x=var_of_interest,ymin="ymin_val", ymax="ymax_val", width=.2),color="blue") +
+  xlab(paste0("Effect of ", var_of_interest, label_description)) +
+  ylab("Predicted Treatment Effect") +
+  theme_linedraw() +
+  theme(axis.ticks = element_blank())
+
+df_eval[,c(var_of_interest,"tauhat","se")] %>% gt() %>%
+  as_latex()
+
