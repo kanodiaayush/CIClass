@@ -17,8 +17,8 @@
 
 local_dir <- "~/Dropbox/Athey/sherlock_oak" # points to  /oak/stanford/groups/athey/Stones2Milestones
 
-data_dir <- "Personal"
-data_dir <- sprintf("%s/basic_rec_system/obs_study", local_dir)
+data_dir <- "."
+# data_dir <- sprintf("%s/basic_rec_system/obs_study", local_dir)
 
 
 outcome_family <- outcome_family # based on whether your outcome is binary or not; input to glm call
@@ -468,7 +468,7 @@ df_finish_lag_overlap <- calculate_propensities(df_finish_lag)
 df_finish_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
   ggtitle("Predicted Probability of Completing SOP Propensity")
 
-df_wcount_qtile_wordsread_overlap <- calculate_propensities(df_wcount_qtile_wordsread_)
+df_wcount_qtile_wordsread_overlap <- calculate_propensities(df_wcount_qtile_wordsread)
 df_wcount_qtile_wordsread_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
   ggtitle("Assigned Word Count propensity")
 
@@ -489,7 +489,7 @@ agg_df_finish_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.fac
   ggtitle("Predicted Probability of Completing SOP Propensity, 
           Averaged Over Each User's Trips")
 
-agg_df_wcount_qtile_wordsread_overlap <- calculate_propensities(agg_df_wcount_qtile_wordsread_)
+agg_df_wcount_qtile_wordsread_overlap <- calculate_propensities(agg_df_wcount_qtile_wordsread)
 agg_df_wcount_qtile_wordsread_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
   ggtitle("Assigned Word Count Propensity, 
           Averaged Over Each User's Trips")
@@ -546,8 +546,17 @@ df_wcount_lag_models <- run_all_models_on_df(df_wcount_lag_overlap)
 round(as.matrix(df_wcount_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
 
 
-#### FINISH SOP LAG NEXT SESSION ANALYSIS ####
-#' # Effect of Finishing SOP on Time to Next Session {#finish_sod_lag}
+#### WORD COUNT QUARTILE SOD WORDS READ ANALYSIS ####
+#' \newpage
+#' # Number of Words Read  {#lag_sod_by_wcount}
+#+ lag_sod_wcount_ate_qtl, results='asis'
+
+df_wcount_lag_models <- run_all_models_on_df(df_wcount_lag_overlap)
+round(as.matrix(df_wcount_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
+
+
+#### FINISH SOD LAG NEXT SESSION ANALYSIS ####
+#' # Effect of Finishing SOD on Time to Next Session {#finish_sod_lag}
 #+ finish_sod_lag_avg, results='asis'
 df_finish_lag_models <- run_all_models_on_df(df_finish_lag_overlap)
 round(as.matrix(df_finish_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
@@ -680,3 +689,27 @@ Gamma.matrix <- double_robust_scores(multi.forest)
 
 opt.tree <- policy_tree(X, Gamma.matrix, depth = 2)
 plot(opt.tree)
+
+
+#### WRITEUP ####
+#' # Introduction
+#' 
+#' Improvements to childhood literacy have been linked to numerous positive outcomes, including economic and social benefits (cite). In this paper, we use data from a mobile application, aimed at improving childhood reading outcomes. School going children from junior kindergarten until grade 3 use the app to read stories, among other things.
+#' 
+#' This work takes advantage of the application’s “Story of the Day” (hereafter SOD) feature. Stories of the Day are featured prominently on the app, and users read the Story of the Day on approximately 33% of days they use the app. Our analysis focuses entirely on these stories. Several Stories of the Day are available to be assigned to users on each day, and vary primarily by estimated reading time and word count. The assignment of story of the day is generic and not personalised, and different stories are shown everyday. As a result, if we consider a user opening the app as an exogenous random decision on a given day, since the stories shown to students are different each day, this gives us exogenous treatments for length of stories shown to students in terms of reading time and number of words in story. We measure the effect of this treatment on reading outcomes. Our identifying motivation is that longer stories reduce the probability of a child reading a story.
+#’
+#' Even if this effect is true on average, this does not mean that longer stories have negative effects on all users. As such, we examine CATEs across a variety of groups in Section \@ref(sod_length_cate).
+#' 
+#' Finally, in Section \@ref(optimal_policy) we attempt to maximize aggregate reading time by identifying the optimal policy, and summarize possible gains from targeted assignment of Stories of the Day by length.
+#' 
+#' # Data Description
+#' ## User Covariates:
+#' In our dataset, we have a bunch of covariates describing users. These include age, grade, statistics about usage such as books read, experience points gained on the app while using it, total time spent on the app, covariates about how well a child answered questions related to their readings, and their reading interests
+#' ## Treatment Definitions:
+#' We use the following treatments for analysis:
+#' Suggested Reading Time for a given story: The app includes suggested reading times for a story in one of five choices. We examine only stories where the estimated reading time was either 7.5 or 12.5 minutes, as estimated reading time is not continuous. These two values of estimated reading time account for 95% of all user-trips. 
+#' Number of words for a given story: We parsed the stories shown on the app to get the number of words in each story, and we use this as a treatment variable. We divide observations into those where the number of words is below and above the median, giving us a treatment and a control. We also do another analysis with multiple treatments where the treatment is characterised by the quantile in which its number of words falls; giving us 4 treatment conditions
+#' We recall that as the assignment of the Story of the Day is at-random, so is the assignment of word count and estimated reading time.
+#' Note: We examine only users-trips where the user started reading the Story of the Day, as otherwise the user would have no estimate of the length or time required to read the story.
+#' # Outcomes
+#' We examine three outcomes in our analysis: whether the user finished reading their assigned Story of the Day, the length of time until their next session, and the estimated number of words they read. 
