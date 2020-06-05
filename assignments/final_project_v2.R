@@ -395,20 +395,25 @@ df_finish_lag %>% setnames_W_Y()
 #+ propensity plots
 # Calculate and Plot Overlap
 df_time_finish_overlap <- calculate_propensities(df_time_finish)
-df_time_finish_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram()
+df_time_finish_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
+  ggtitle("Above Median SOP Reading Time Propensity, Finish SOD Outcome")
 
 df_wcount_finish_overlap <- calculate_propensities(df_wcount_finish)
-df_wcount_finish_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram()
+df_wcount_finish_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
+  ggtitle("Above Median SOP Word Count Propensity, Finish SOD Outcome")
 
 df_time_lag_overlap <- calculate_propensities(df_time_lag)
-df_time_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram()
+df_time_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
+  ggtitle("Above Median SOP Reading Time Propensity, Time to Next Session Outcome")
 
 df_wcount_lag_overlap <- calculate_propensities(df_wcount_lag)
-df_wcount_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram()
+df_wcount_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
+  ggtitle("Above Median SOP Word Count Propensity, Time to Next Session Outcome")
 
 
 df_finish_lag_overlap <- calculate_propensities(df_finish_lag)
-df_finish_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram()
+df_finish_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
+  ggtitle("Predicted Probability of Completing SOP")
 
 # Subset if necessary
 df_time_finish_overlap <- df_time_finish_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
@@ -420,6 +425,7 @@ df_finish_lag_overlap <- df_finish_lag_overlap[p_W_rf %between% propensity_bound
 
 
 #### READING TIME FINISH SOD ANALYSIS ####
+#' \newpage
 #' # Rate at Which Users Finish Stories of the Day by Length {#finish_sod_by_length}
 #+ finish_sod_time_ate, results='asis'
 
@@ -427,6 +433,7 @@ df_time_finish_models <- run_all_models_on_df(df_time_finish_overlap)
 round(as.matrix(df_time_finish_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
 
 #### WORD COUNT FINISH SOD ANALYSIS ####
+#' \newpage
 #' # Rate at Which Users Finish Stories of the Day by Word Count {#finish_sod_by_wcount}
 #+ finish_sod_wcount_ate, results='asis'
 
@@ -436,6 +443,7 @@ round(as.matrix(df_wcount_finish_models), 3) %>% stargazer(summary = FALSE, head
 
 
 #### READING TIME LAG SOD ANALYSIS ####
+#' \newpage
 #' # Rate at Which Users Finish Stories of the Day by Length {#lag_sod_by_length}
 #+ lag_sod_time_ate, results='asis'
 
@@ -443,11 +451,17 @@ df_time_lag_models <- run_all_models_on_df(df_time_lag_overlap)
 round(as.matrix(df_time_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
 
 #### WORD COUNT LAG SOD ANALYSIS ####
+#' \newpage
 #' # Rate at Which Users Finish Stories of the Day by Word Count {#lag_sod_by_wcount}
 #+ lag_sod_wcount_ate, results='asis'
 
 df_wcount_lag_models <- run_all_models_on_df(df_wcount_lag_overlap)
 round(as.matrix(df_wcount_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
+
+#### INSTRUMENTAL VARIABLES AND CAUSAL FORESTS ####
+#' \newpage
+#' # Instrumental Variables and Causal Forests
+#' In this section we estimate ATE by using instrumental variables. HTO BE DONE??
 
 
 #### FINISH SOD LAG NEXT SESSION ANALYSIS ####
@@ -455,3 +469,39 @@ round(as.matrix(df_wcount_lag_models), 3) %>% stargazer(summary = FALSE, header 
 #+ finish_sod_lag_avg, results='asis'
 df_finish_lag_models <- run_all_models_on_df(df_finish_lag_overlap)
 round(as.matrix(df_finish_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
+
+#### FINISH SOD LAG NEXT SESSION CATE ANALYSIS ####
+#' We now estimate the CATE, and use it to construct quartiles. We then report the ATE as estimated with AIPW from our causal forest estimate across quartiles. 
+#+ results='asis'
+cf <- causal_forest_from_df(df_finish_lag_overlap)
+
+oob_pred <- predict(cf, estimate.variance=TRUE)
+df_finish_lag_overlap$cate <- oob_pred$predictions
+
+# Manually creating subgroups
+num_tiles <- 4  # ntiles = CATE is above / below the median
+df_finish_lag_overlap$ntile <- factor(ntile(oob_pred$predictions, n=num_tiles))
+
+
+# ATE estimates
+df_finish_lag_overlap_qtile <- df_finish_lag_overlap[,.(
+  avg_cf_cate = mean(cate)
+),.(ntile)][order(ntile)]
+
+df_finish_lag_overlap_qtile
+
+estimated_aipw_ate <- lapply(
+  seq(num_tiles), function(w) {
+    ate <- average_treatment_effect(cf, subset = df_finish_lag_overlap$ntile == w)
+  })
+estimated_aipw_ate <- data.frame(do.call(rbind, estimated_aipw_ate))
+estimated_aipw_ate$ntile <- factor(seq(num_tiles))
+setDT(estimated_aipw_ate)
+setnames(estimated_aipw_ate, c("aipw_estimate", "aipw_std.err", "ntile"))
+# join CATE estimates together
+df_finish_lag_overlap_qtile <- df_finish_lag_overlap_qtile[estimated_aipw_ate, on = .(ntile)]
+df_finish_lag_overlap_qtile %>% stargazer(summary = FALSE, header = FALSE)
+
+
+
+
