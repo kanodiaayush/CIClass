@@ -384,6 +384,15 @@ freadom[, W_wordcount_high := ifelse(W_wordcount>median(W_wordcount), 1, 0)]
 freadom[, `:=`(W_utility_high = ifelse(W_utility==3, 1, 0),
                Y_utility_high = ifelse(Y_utility==3, 1, 0))]
 
+# make words read quartiles
+freadom[, W_wordcount_qtile := ntile(W_wordcount, 4)]
+
+# create words read count
+freadom[, Y_wordsread := case_when(Y_utility==0 ~ 0,
+                                 Y_utility==1 ~ W_wordcount * .25,
+                                 Y_utility==2 ~ W_wordcount * .5,
+                                 Y_utility==3 ~ W_wordcount)]
+
 covariate_names <- colnames(freadom)[!grepl("W|Y", colnames(freadom), ignore.case = FALSE)]
 
 # construct various data sets we'll need
@@ -402,6 +411,9 @@ df_wcount_lag %>% setnames_W_Y()
 df_finish_lag <- freadom[,c(covariate_names, "W_utility_high", "Y_next_view_lag"), with=FALSE]
 df_finish_lag %>% setnames_W_Y()
 
+df_wcount_qtile_wordsread <- freadom[,c(covariate_names, "W_wordcount_qtile", "Y_wordsread"), with=FALSE]
+df_wcount_qtile_wordsread %>% setnames_W_Y()
+
 # aggregate level data
 freadom_agg <- fread(sprintf("%s/treatment_effects_agg.csv", data_dir))
 
@@ -415,6 +427,11 @@ freadom_agg[, W_wordcount_high := ifelse(W_wordcount>median(W_wordcount), 1, 0)]
 freadom_agg[, `:=`(W_utility_high = ifelse(W_utility>1.5, 1, 0),
                Y_utility_high = ifelse(Y_utility>1.5, 1, 0))]
 
+# make words read quartiles
+freadom_agg[, W_wordcount_qtile := ntile(W_wordcount, 4)]
+
+# create words read count
+freadom_agg[, Y_wordsread := Y_utility/3 * W_wordcount]
 
 # construct aggregate data
 agg_df_time_finish <- freadom_agg[,c(covariate_names, "W_reading_time_high", "Y_utility"), with=FALSE]
@@ -432,6 +449,8 @@ agg_df_wcount_lag %>% setnames_W_Y()
 agg_df_finish_lag <- freadom_agg[,c(covariate_names, "W_utility_high", "Y_next_view_lag"), with=FALSE]
 agg_df_finish_lag %>% setnames_W_Y()
 
+agg_df_wcount_qtile_wordsread <- freadom_agg[,c(covariate_names, "W_wordcount_qtile", "Y_wordsread"), with=FALSE]
+agg_df_wcount_qtile_wordsread %>% setnames_W_Y()
 
 #### ANALYSIS PER DATASET ####
 
@@ -457,6 +476,10 @@ df_wcount_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(
 df_finish_lag_overlap <- calculate_propensities(df_finish_lag)
 df_finish_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
   ggtitle("Predicted Probability of Completing SOP")
+
+df_wcount_qtile_wordsread_overlap <- calculate_propensities(df_wcount_qtile_wordsread_)
+df_wcount_qtile_wordsread_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
+  ggtitle("Assigned Word Count")
 
 # aggregate data
 
@@ -486,18 +509,26 @@ agg_df_finish_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.fac
   ggtitle("Predicted Probability of Completing SOP, 
           Averaged Over Each User's Trips")
 
+agg_df_wcount_qtile_wordsread_overlap <- calculate_propensities(agg_df_wcount_qtile_wordsread_)
+agg_df_wcount_qtile_wordsread_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
+  ggtitle("Assigned Word Count, 
+          Averaged Over Each User's Trips")
+
 # Subset if necessary
 df_time_finish_overlap <- df_time_finish_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
 df_wcount_finish_overlap <- df_wcount_finish_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
 df_time_lag_overlap <- df_time_lag_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
 df_wcount_lag_overlap <- df_wcount_lag_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
 df_finish_lag_overlap <- df_finish_lag_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
+df_wcount_qtile_wordsread_overlap <- df_wcount_qtile_wordsread_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
+
 
 agg_df_time_finish_overlap <- agg_df_time_finish_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
 agg_df_wcount_finish_overlap <- agg_df_wcount_finish_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
 agg_df_time_lag_overlap <- agg_df_time_lag_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
 agg_df_wcount_lag_overlap <- agg_df_wcount_lag_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
 agg_df_finish_lag_overlap <- agg_df_finish_lag_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
+agg_df_wcount_qtile_wordsread_overlap <- agg_df_wcount_qtile_wordsread_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
 
 
 #### READING TIME FINISH SOD ANALYSIS ####
