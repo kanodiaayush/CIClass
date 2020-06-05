@@ -34,6 +34,7 @@ calculate_propensities <- function(df, continuous_treatment = FALSE){
   }
   
   # no matter what do RF propensity scores
+  # FIXME: does this actually make sense??
   pW_rf.fit = regression_forest(Xmod, Wmod, num.trees = 500)
   pW_rf <- predict(pW_rf.fit, newdata = Xmod)$predictions
   
@@ -74,7 +75,7 @@ run_all_models_on_df <- function(df, df_propensity = NULL, continuous_treatment 
     
     cf = causal_forest_from_df(df)
     
-    ape_rf_aipw = average_partial_effect(, fitted.model = cf)
+    ape_rf_aipw = grf::average_partial_effect(cf)
     
     tauhat_rf_aipw_ape = c(ATE=ape_rf_aipw["estimate"],
                            lower_ci=ape_rf_aipw["estimate"] - 1.96 * ape_rf_aipw["std.err"],
