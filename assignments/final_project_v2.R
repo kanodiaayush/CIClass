@@ -45,6 +45,7 @@ library(sandwich)
 devtools::install_github("swager/amlinear") # install amlinear package
 library(amlinear)
 library(stargazer)
+library(policytree)
 
 library(dplyr)       # Data manipulation (0.8.0.1)
 library(fBasics)     # Summary statistics (3042.89)
@@ -120,8 +121,10 @@ difference_in_means <- function(dataset) {
   y1 <- dataset %>% dplyr::filter(W == 1) %>% dplyr::pull(Y) # Outcome in treatment grp
   y0 <- dataset %>% dplyr::filter(W == 0) %>% dplyr::pull(Y) # Outcome in control group
   
-  n1 <- sum(df[,"W"])     # Number of obs in treatment
-  n0 <- sum(1 - df[,"W"]) # Number of obs in control
+  n1 <- sum(dataset[,"W"])     # Number of obs in treatment
+  print(n1)
+  n0 <- sum(1 - dataset[,"W"]) # Number of obs in control
+  print(n0)
   
   # Difference in means is ATE
   tauhat <- mean(y1) - mean(y0)
@@ -354,6 +357,8 @@ run_all_models_on_df <- function(df_propensity, continuous_treatment = FALSE){
 
 
 freadom <- fread(sprintf("%s/treatment_effects.csv", data_dir))
+data_dir <- "Personal"
+freadom <- fread(sprintf("%s/treatment_effects.csv", data_dir))
 
 # cleaning
 # some W not really continuous treatment - just different levels
@@ -367,6 +372,7 @@ freadom <- freadom[W_utility != 0]
 # create binary treatment variables
 freadom[, W_reading_time_high := ifelse(W_reading_time==max(W_reading_time), 1, 0)]
 freadom[, W_wordcount_high := ifelse(W_wordcount>median(W_wordcount), 1, 0)]
+freadom[, W_wordcount_AB := ifelse(W_wordcount > median(W_wordcount), "A", "B")]
 # make Utility (completion) binary
 freadom[, `:=`(W_utility_high = ifelse(W_utility==3, 1, 0),
                Y_utility_high = ifelse(Y_utility==3, 1, 0))]
@@ -502,6 +508,12 @@ setnames(estimated_aipw_ate, c("aipw_estimate", "aipw_std.err", "ntile"))
 df_finish_lag_overlap_qtile <- df_finish_lag_overlap_qtile[estimated_aipw_ate, on = .(ntile)]
 df_finish_lag_overlap_qtile %>% stargazer(summary = FALSE, header = FALSE)
 
+X <- as.matrix(freadom[, c(covariate_names), with=FALSE])
+Y <- as.matrix(freadom[, c("Y_utility"), with=FALSE])
+W <- as.matrix(freadom[, c("W_wordcount_AB"), with=FALSE])
+multi.forest <- multi_causal_forest(X = X, Y = Y, W = W)
+Gamma.matrix <- double_robust_scores(multi.forest)
 
-
-
+train <- sample(1:n, 200)
+opt.tree <- policy_tree(X[train, ], Gamma.matrix[train, ], depth = 2)
+opt.tree
