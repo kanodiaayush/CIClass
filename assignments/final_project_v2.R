@@ -16,7 +16,10 @@
 # set global options
 
 local_dir <- "~/Dropbox/Athey/sherlock_oak" # points to  /oak/stanford/groups/athey/Stones2Milestones
+
+data_dir <- "Personal"
 data_dir <- sprintf("%s/basic_rec_system/obs_study", local_dir)
+
 
 outcome_family <- outcome_family # based on whether your outcome is binary or not; input to glm call
 outcome_family <- "gaussian" # if outcome not binary
@@ -32,6 +35,7 @@ prop_drop_rf <- c(0.01, 0.02, 0.04, 0.1, 0.2, 0.3, 0.4, .5, .7, .8, .9)
 
 propensity_bound <- c(0.01, 0.99)
 
+#### PACKAGES ####
 library(here)
 # devtools::install_github("hrbrmstr/hrbrthemes")
 # library(hrbrthemes)
@@ -73,6 +77,11 @@ remotes::install_github('susanathey/causalTree') # Uncomment this to install the
 library(causalTree)
 remotes::install_github('grf-labs/sufrep') # Uncomment this to install the sufrep package
 library(sufrep)
+
+devtools::install_github("grf-labs/policytree")
+library(policytree)
+
+
 
 library(bookdown)
 library(CBPS)
@@ -262,13 +271,13 @@ calculate_propensities <- function(df, continuous_treatment = FALSE){
   df_mod
 }
 
-causal_forest_from_df <- function(df){
+forest_from_df <- function(df, FUN = causal_forest, Wname = "W", Yname = "Y"){
   df_mod = copy(df)
   setDT(df_mod)
-  Xmod = df_mod[,covariate_names, with=FALSE]
-  Ymod = df_mod$Y
-  Wmod = df_mod$W
-  causal_forest(Xmod, Ymod, Wmod, num.trees = 500) 
+  Xmod = df_mod[,covariate_names, with=FALSE] %>% as.matrix()
+  Ymod = df_mod[,Yname, with=FALSE] %>% as.matrix()
+  Wmod = df_mod[,Wname, with=FALSE] %>% as.matrix()
+  FUN(Xmod, Ymod, Wmod, num.trees = 500) 
 }
 
 run_all_models_on_df <- function(df_propensity, continuous_treatment = FALSE){
@@ -288,7 +297,7 @@ run_all_models_on_df <- function(df_propensity, continuous_treatment = FALSE){
     tauhat_CBPS_pscore_ols <- prop_score_ols(df, df_propensity$p_W_CBPS)
     tauhat_lin_CBPS_aipw <- aipw_ols(df, df_propensity$p_W_CBPS)
     
-    cf = causal_forest_from_df(df)
+    cf = forest_from_df(df)
     
     ape_rf_aipw = grf::average_partial_effect(cf)
     
@@ -306,7 +315,7 @@ run_all_models_on_df <- function(df_propensity, continuous_treatment = FALSE){
     tauhat_CBPS_pscore_ols <- NULL
     tauhat_lin_CBPS_aipw <- NULL
     
-    cf = causal_forest_from_df(df)
+    cf = forest_from_df(df)
     
     ate_rf_aipw = average_treatment_effect(cf, target.sample="control")
     
@@ -355,9 +364,7 @@ run_all_models_on_df <- function(df_propensity, continuous_treatment = FALSE){
 
 #### LOAD DATA ####
 
-
-freadom <- fread(sprintf("%s/treatment_effects.csv", data_dir))
-data_dir <- "Personal"
+# trip-level data 
 freadom <- fread(sprintf("%s/treatment_effects.csv", data_dir))
 
 # cleaning
@@ -372,7 +379,7 @@ freadom <- freadom[W_utility != 0]
 # create binary treatment variables
 freadom[, W_reading_time_high := ifelse(W_reading_time==max(W_reading_time), 1, 0)]
 freadom[, W_wordcount_high := ifelse(W_wordcount>median(W_wordcount), 1, 0)]
-freadom[, W_wordcount_AB := ifelse(W_wordcount > median(W_wordcount), "A", "B")]
+# freadom[, W_wordcount_AB := ifelse(W_wordcount > median(W_wordcount), "A", "B")]
 # make Utility (completion) binary
 freadom[, `:=`(W_utility_high = ifelse(W_utility==3, 1, 0),
                Y_utility_high = ifelse(Y_utility==3, 1, 0))]
@@ -394,6 +401,36 @@ df_wcount_lag %>% setnames_W_Y()
 
 df_finish_lag <- freadom[,c(covariate_names, "W_utility_high", "Y_next_view_lag"), with=FALSE]
 df_finish_lag %>% setnames_W_Y()
+
+# aggregate level data
+freadom_agg <- fread(sprintf("%s/treatment_effects_agg.csv", data_dir))
+
+# don't need to do any filtering here because everything is an aggregate
+
+# create binary treatment variables
+freadom_agg[, W_reading_time_high := ifelse(W_reading_time>median(W_reading_time), 1, 0)]
+freadom_agg[, W_wordcount_high := ifelse(W_wordcount>median(W_wordcount), 1, 0)]
+
+# make Utility (completion) binary
+freadom_agg[, `:=`(W_utility_high = ifelse(W_utility>1.5, 1, 0),
+               Y_utility_high = ifelse(Y_utility>1.5, 1, 0))]
+
+
+# construct aggregate data
+agg_df_time_finish <- freadom_agg[,c(covariate_names, "W_reading_time_high", "Y_utility"), with=FALSE]
+agg_df_time_finish %>% setnames_W_Y()
+
+agg_df_wcount_finish <- freadom_agg[,c(covariate_names, "W_wordcount_high", "Y_utility"), with=FALSE]
+agg_df_wcount_finish %>% setnames_W_Y()
+
+agg_df_time_lag <- freadom_agg[,c(covariate_names, "W_reading_time_high", "Y_next_view_lag"), with=FALSE]
+agg_df_time_lag %>% setnames_W_Y()
+
+agg_df_wcount_lag <- freadom_agg[,c(covariate_names, "W_wordcount_high", "Y_next_view_lag"), with=FALSE]
+agg_df_wcount_lag %>% setnames_W_Y()
+
+agg_df_finish_lag <- freadom_agg[,c(covariate_names, "W_utility_high", "Y_next_view_lag"), with=FALSE]
+agg_df_finish_lag %>% setnames_W_Y()
 
 
 #### ANALYSIS PER DATASET ####
@@ -421,6 +458,34 @@ df_finish_lag_overlap <- calculate_propensities(df_finish_lag)
 df_finish_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
   ggtitle("Predicted Probability of Completing SOP")
 
+# aggregate data
+
+agg_df_time_finish_overlap <- calculate_propensities(agg_df_time_finish)
+agg_df_time_finish_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
+  ggtitle("Above Median SOP Reading Time Propensity, Finish SOD Outcome, 
+          Averaged Over Each User's Trips")
+
+agg_df_wcount_finish_overlap <- calculate_propensities(agg_df_wcount_finish)
+agg_df_wcount_finish_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
+  ggtitle("Above Median SOP Word Count Propensity, Finish SOD Outcome, 
+          Averaged Over Each User's Trips")
+
+agg_df_time_lag_overlap <- calculate_propensities(agg_df_time_lag)
+agg_df_time_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
+  ggtitle("Above Median SOP Reading Time Propensity, Time to Next Session Outcome, 
+          Averaged Over Each User's Trips")
+
+agg_df_wcount_lag_overlap <- calculate_propensities(agg_df_wcount_lag)
+agg_df_wcount_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
+  ggtitle("Above Median SOP Word Count Propensity, Time to Next Session Outcome, 
+          Averaged Over Each User's Trips")
+
+
+agg_df_finish_lag_overlap <- calculate_propensities(agg_df_finish_lag)
+agg_df_finish_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
+  ggtitle("Predicted Probability of Completing SOP, 
+          Averaged Over Each User's Trips")
+
 # Subset if necessary
 df_time_finish_overlap <- df_time_finish_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
 df_wcount_finish_overlap <- df_wcount_finish_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
@@ -428,6 +493,11 @@ df_time_lag_overlap <- df_time_lag_overlap[p_W_rf %between% propensity_bound & p
 df_wcount_lag_overlap <- df_wcount_lag_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
 df_finish_lag_overlap <- df_finish_lag_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
 
+agg_df_time_finish_overlap <- agg_df_time_finish_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
+agg_df_wcount_finish_overlap <- agg_df_wcount_finish_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
+agg_df_time_lag_overlap <- agg_df_time_lag_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
+agg_df_wcount_lag_overlap <- agg_df_wcount_lag_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
+agg_df_finish_lag_overlap <- agg_df_finish_lag_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
 
 
 #### READING TIME FINISH SOD ANALYSIS ####
@@ -464,11 +534,6 @@ round(as.matrix(df_time_lag_models), 3) %>% stargazer(summary = FALSE, header = 
 df_wcount_lag_models <- run_all_models_on_df(df_wcount_lag_overlap)
 round(as.matrix(df_wcount_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
 
-#### INSTRUMENTAL VARIABLES AND CAUSAL FORESTS ####
-#' \newpage
-#' # Instrumental Variables and Causal Forests
-#' In this section we estimate ATE by using instrumental variables. HTO BE DONE??
-
 
 #### FINISH SOD LAG NEXT SESSION ANALYSIS ####
 #' # Effect of Finishing SOD on Time to Next Session {#finish_sod_lag}
@@ -479,7 +544,7 @@ round(as.matrix(df_finish_lag_models), 3) %>% stargazer(summary = FALSE, header 
 #### FINISH SOD LAG NEXT SESSION CATE ANALYSIS ####
 #' We now estimate the CATE, and use it to construct quartiles. We then report the ATE as estimated with AIPW from our causal forest estimate across quartiles. 
 #+ results='asis'
-cf <- causal_forest_from_df(df_finish_lag_overlap)
+cf <- forest_from_df(df_finish_lag_overlap)
 
 oob_pred <- predict(cf, estimate.variance=TRUE)
 df_finish_lag_overlap$cate <- oob_pred$predictions
@@ -508,10 +573,91 @@ setnames(estimated_aipw_ate, c("aipw_estimate", "aipw_std.err", "ntile"))
 df_finish_lag_overlap_qtile <- df_finish_lag_overlap_qtile[estimated_aipw_ate, on = .(ntile)]
 df_finish_lag_overlap_qtile %>% stargazer(summary = FALSE, header = FALSE)
 
+
+
+
+#### READING TIME FINISH SOD AGGREGATE ANALYSIS ####
+#' \newpage
+#' # Rate at Which Users on Their Average Trip Finish Stories of the Day by Length {#finish_sod_by_length}
+#+ finish_sod_time_ate, results='asis'
+
+agg_df_time_finish_models <- run_all_models_on_df(agg_df_time_finish_overlap)
+round(as.matrix(agg_df_time_finish_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
+
+#### WORD COUNT FINISH SOD AGGREGATE ANALYSIS ####
+#' \newpage
+#' # Rate at Which Users on Their Average Trip Finish Stories of the Day by Word Count {#finish_sod_by_wcount}
+#+ finish_sod_wcount_ate, results='asis'
+
+agg_df_wcount_finish_models <- run_all_models_on_df(agg_df_wcount_finish_overlap)
+round(as.matrix(agg_df_wcount_finish_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
+
+
+
+#### READING TIME LAG SOD AGGREGATE ANALYSIS ####
+#' \newpage
+#' # Rate at Which Users on Their Average Trip Finish Stories of the Day by Length {#lag_sod_by_length}
+#+ lag_sod_time_ate, results='asis'
+
+agg_df_time_lag_models <- run_all_models_on_df(agg_df_time_lag_overlap)
+round(as.matrix(agg_df_time_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
+
+#### WORD COUNT LAG SOD AGGREGATE ANALYSIS ####
+#' \newpage
+#' # Rate at Which Users on Their Average Trip Finish Stories of the Day by Word Count {#lag_sod_by_wcount}
+#+ lag_sod_wcount_ate, results='asis'
+
+agg_df_wcount_lag_models <- run_all_models_on_df(agg_df_wcount_lag_overlap)
+round(as.matrix(agg_df_wcount_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
+
+
+#### FINISH SOD LAG NEXT SESSION AGGREGATE ANALYSIS ####
+#' # Effect of Finishing SOD on Time to Next Session {#finish_sod_lag}
+#+ finish_sod_lag_avg, results='asis'
+agg_df_finish_lag_models <- run_all_models_on_df(agg_df_finish_lag_overlap)
+round(as.matrix(agg_df_finish_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
+
+#### FINISH SOD LAG NEXT SESSION CATE AGGREGATE ANALYSIS ####
+#' We now estimate the CATE, and use it to construct quartiles. We then report the ATE as estimated with AIPW from our causal forest estimate across quartiles. 
+#+ results='asis'
+cf <- forest_from_df(agg_df_finish_lag_overlap)
+
+oob_pred <- predict(cf, estimate.variance=TRUE)
+agg_df_finish_lag_overlap$cate <- oob_pred$predictions
+
+# Manually creating subgroups
+num_tiles <- 4  # ntiles = CATE is above / below the median
+agg_df_finish_lag_overlap$ntile <- factor(ntile(oob_pred$predictions, n=num_tiles))
+
+
+# ATE estimates
+agg_df_finish_lag_overlap_qtile <- agg_df_finish_lag_overlap[,.(
+  avg_cf_cate = mean(cate)
+),.(ntile)][order(ntile)]
+
+agg_df_finish_lag_overlap_qtile
+
+estimated_aipw_ate <- lapply(
+  seq(num_tiles), function(w) {
+    ate <- average_treatment_effect(cf, subset = agg_df_finish_lag_overlap$ntile == w)
+  })
+estimated_aipw_ate <- data.frame(do.call(rbind, estimated_aipw_ate))
+estimated_aipw_ate$ntile <- factor(seq(num_tiles))
+setDT(estimated_aipw_ate)
+setnames(estimated_aipw_ate, c("aipw_estimate", "aipw_std.err", "ntile"))
+# join CATE estimates together
+agg_df_finish_lag_overlap_qtile <- agg_df_finish_lag_overlap_qtile[estimated_aipw_ate, on = .(ntile)]
+agg_df_finish_lag_overlap_qtile %>% stargazer(summary = FALSE, header = FALSE)
+
+
+
+#### POLICY TREE ####
 X <- as.matrix(freadom[, c(covariate_names), with=FALSE])
-Y <- as.matrix(freadom[, c("Y_utility"), with=FALSE])
-W <- as.matrix(freadom[, c("W_wordcount_AB"), with=FALSE])
-multi.forest <- multi_causal_forest(X = X, Y = Y, W = W)
+# Y <- as.matrix(freadom[, c("Y_utility"), with=FALSE])
+# W <- as.matrix(freadom[, c("W_wordcount_high"), with=FALSE])
+# multi.forest <- multi_causal_forest(X = X, Y = Y, W = W)
+
+multi.forest <- forest_from_df(freadom, multi_causal_forest, "W_wordcount_high", "Y_utility")
 Gamma.matrix <- double_robust_scores(multi.forest)
 
 train <- sample(1:n, 200)
