@@ -374,7 +374,7 @@ freadom$W_wordcount %>% hist()
 
 # for now only look at 'medium' and 'high' levels of W_reading_time
 freadom <- freadom[W_reading_time==12.5 | W_reading_time==7.5]
-# look only at people who actually opened the SOD
+# look only at people who actually opened the SOP
 freadom <- freadom[W_utility != 0]
 # create binary treatment variables
 freadom[, W_reading_time_high := ifelse(W_reading_time==max(W_reading_time), 1, 0)]
@@ -458,60 +458,40 @@ agg_df_wcount_qtile_wordsread %>% setnames_W_Y()
 # Calculate and Plot Overlap
 df_time_finish_overlap <- calculate_propensities(df_time_finish)
 df_time_finish_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
-  ggtitle("Above Median SOP Reading Time Propensity, Finish SOD Outcome")
+  ggtitle("Above Median SOP Reading Time Propensity")
 
 df_wcount_finish_overlap <- calculate_propensities(df_wcount_finish)
 df_wcount_finish_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
-  ggtitle("Above Median SOP Word Count Propensity, Finish SOD Outcome")
-
-df_time_lag_overlap <- calculate_propensities(df_time_lag)
-df_time_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
-  ggtitle("Above Median SOP Reading Time Propensity, Time to Next Session Outcome")
-
-df_wcount_lag_overlap <- calculate_propensities(df_wcount_lag)
-df_wcount_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
-  ggtitle("Above Median SOP Word Count Propensity, Time to Next Session Outcome")
-
+  ggtitle("Above Median SOP Word Count Propensity")
 
 df_finish_lag_overlap <- calculate_propensities(df_finish_lag)
 df_finish_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
-  ggtitle("Predicted Probability of Completing SOP")
+  ggtitle("Predicted Probability of Completing SOP Propensity")
 
 df_wcount_qtile_wordsread_overlap <- calculate_propensities(df_wcount_qtile_wordsread_)
 df_wcount_qtile_wordsread_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
-  ggtitle("Assigned Word Count")
+  ggtitle("Assigned Word Count propensity")
 
 # aggregate data
 
 agg_df_time_finish_overlap <- calculate_propensities(agg_df_time_finish)
 agg_df_time_finish_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
-  ggtitle("Above Median SOP Reading Time Propensity, Finish SOD Outcome, 
+  ggtitle("Above Median SOP Reading Time Propensity, 
           Averaged Over Each User's Trips")
 
 agg_df_wcount_finish_overlap <- calculate_propensities(agg_df_wcount_finish)
 agg_df_wcount_finish_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
-  ggtitle("Above Median SOP Word Count Propensity, Finish SOD Outcome, 
+  ggtitle("Above Median SOP Word Count Propensity, 
           Averaged Over Each User's Trips")
-
-agg_df_time_lag_overlap <- calculate_propensities(agg_df_time_lag)
-agg_df_time_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
-  ggtitle("Above Median SOP Reading Time Propensity, Time to Next Session Outcome, 
-          Averaged Over Each User's Trips")
-
-agg_df_wcount_lag_overlap <- calculate_propensities(agg_df_wcount_lag)
-agg_df_wcount_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
-  ggtitle("Above Median SOP Word Count Propensity, Time to Next Session Outcome, 
-          Averaged Over Each User's Trips")
-
 
 agg_df_finish_lag_overlap <- calculate_propensities(agg_df_finish_lag)
 agg_df_finish_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
-  ggtitle("Predicted Probability of Completing SOP, 
+  ggtitle("Predicted Probability of Completing SOP Propensity, 
           Averaged Over Each User's Trips")
 
 agg_df_wcount_qtile_wordsread_overlap <- calculate_propensities(agg_df_wcount_qtile_wordsread_)
 agg_df_wcount_qtile_wordsread_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
-  ggtitle("Assigned Word Count, 
+  ggtitle("Assigned Word Count Propensity, 
           Averaged Over Each User's Trips")
 
 # Subset if necessary
@@ -531,7 +511,7 @@ agg_df_finish_lag_overlap <- agg_df_finish_lag_overlap[p_W_rf %between% propensi
 agg_df_wcount_qtile_wordsread_overlap <- agg_df_wcount_qtile_wordsread_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
 
 
-#### READING TIME FINISH SOD ANALYSIS ####
+#### READING TIME FINISH SOP ANALYSIS ####
 #' \newpage
 #' # Rate at Which Users Finish Stories of the Day by Length {#finish_sod_by_length}
 #+ finish_sod_time_ate, results='asis'
@@ -539,7 +519,7 @@ agg_df_wcount_qtile_wordsread_overlap <- agg_df_wcount_qtile_wordsread_overlap[p
 df_time_finish_models <- run_all_models_on_df(df_time_finish_overlap)
 round(as.matrix(df_time_finish_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
 
-#### WORD COUNT FINISH SOD ANALYSIS ####
+#### WORD COUNT FINISH SOP ANALYSIS ####
 #' \newpage
 #' # Rate at Which Users Finish Stories of the Day by Word Count {#finish_sod_by_wcount}
 #+ finish_sod_wcount_ate, results='asis'
@@ -549,7 +529,7 @@ round(as.matrix(df_wcount_finish_models), 3) %>% stargazer(summary = FALSE, head
 
 
 
-#### READING TIME LAG SOD ANALYSIS ####
+#### READING TIME LAG SOP ANALYSIS ####
 #' \newpage
 #' # Rate at Which Users Finish Stories of the Day by Length {#lag_sod_by_length}
 #+ lag_sod_time_ate, results='asis'
@@ -557,7 +537,7 @@ round(as.matrix(df_wcount_finish_models), 3) %>% stargazer(summary = FALSE, head
 df_time_lag_models <- run_all_models_on_df(df_time_lag_overlap)
 round(as.matrix(df_time_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
 
-#### WORD COUNT LAG SOD ANALYSIS ####
+#### WORD COUNT LAG SOP ANALYSIS ####
 #' \newpage
 #' # Rate at Which Users Finish Stories of the Day by Word Count {#lag_sod_by_wcount}
 #+ lag_sod_wcount_ate, results='asis'
@@ -566,13 +546,13 @@ df_wcount_lag_models <- run_all_models_on_df(df_wcount_lag_overlap)
 round(as.matrix(df_wcount_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
 
 
-#### FINISH SOD LAG NEXT SESSION ANALYSIS ####
-#' # Effect of Finishing SOD on Time to Next Session {#finish_sod_lag}
+#### FINISH SOP LAG NEXT SESSION ANALYSIS ####
+#' # Effect of Finishing SOP on Time to Next Session {#finish_sod_lag}
 #+ finish_sod_lag_avg, results='asis'
 df_finish_lag_models <- run_all_models_on_df(df_finish_lag_overlap)
 round(as.matrix(df_finish_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
 
-#### FINISH SOD LAG NEXT SESSION CATE ANALYSIS ####
+#### FINISH SOP LAG NEXT SESSION CATE ANALYSIS ####
 #' We now estimate the CATE, and use it to construct quartiles. We then report the ATE as estimated with AIPW from our causal forest estimate across quartiles. 
 #+ results='asis'
 cf <- forest_from_df(df_finish_lag_overlap)
@@ -607,7 +587,7 @@ df_finish_lag_overlap_qtile %>% stargazer(summary = FALSE, header = FALSE)
 
 
 
-#### READING TIME FINISH SOD AGGREGATE ANALYSIS ####
+#### READING TIME FINISH SOP AGGREGATE ANALYSIS ####
 #' \newpage
 #' # Rate at Which Users on Their Average Trip Finish Stories of the Day by Length {#finish_sod_by_length}
 #+ finish_sod_time_ate_agg, results='asis'
@@ -615,7 +595,7 @@ df_finish_lag_overlap_qtile %>% stargazer(summary = FALSE, header = FALSE)
 agg_df_time_finish_models <- run_all_models_on_df(agg_df_time_finish_overlap)
 round(as.matrix(agg_df_time_finish_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
 
-#### WORD COUNT FINISH SOD AGGREGATE ANALYSIS ####
+#### WORD COUNT FINISH SOP AGGREGATE ANALYSIS ####
 #' \newpage
 #' # Rate at Which Users on Their Average Trip Finish Stories of the Day by Word Count {#finish_sod_by_wcount}
 #+ finish_sod_wcount_ate_agg, results='asis'
@@ -625,7 +605,7 @@ round(as.matrix(agg_df_wcount_finish_models), 3) %>% stargazer(summary = FALSE, 
 
 
 
-#### READING TIME LAG SOD AGGREGATE ANALYSIS ####
+#### READING TIME LAG SOP AGGREGATE ANALYSIS ####
 #' \newpage
 #' # Rate at Which Users on Their Average Trip Finish Stories of the Day by Length {#lag_sod_by_length}
 #+ lag_sod_time_ate_agg, results='asis'
@@ -633,7 +613,7 @@ round(as.matrix(agg_df_wcount_finish_models), 3) %>% stargazer(summary = FALSE, 
 agg_df_time_lag_models <- run_all_models_on_df(agg_df_time_lag_overlap)
 round(as.matrix(agg_df_time_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
 
-#### WORD COUNT LAG SOD AGGREGATE ANALYSIS ####
+#### WORD COUNT LAG SOP AGGREGATE ANALYSIS ####
 #' \newpage
 #' # Rate at Which Users on Their Average Trip Finish Stories of the Day by Word Count {#lag_sod_by_wcount}
 #+ lag_sod_wcount_ate_agg, results='asis'
@@ -642,13 +622,13 @@ agg_df_wcount_lag_models <- run_all_models_on_df(agg_df_wcount_lag_overlap)
 round(as.matrix(agg_df_wcount_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
 
 
-#### FINISH SOD LAG NEXT SESSION AGGREGATE ANALYSIS ####
-#' # Effect of Finishing SOD on Time to Next Session {#finish_sod_lag}
+#### FINISH SOP LAG NEXT SESSION AGGREGATE ANALYSIS ####
+#' # Effect of Finishing SOP on Time to Next Session {#finish_sod_lag}
 #+ finish_sod_lag_avg_agg, results='asis'
 agg_df_finish_lag_models <- run_all_models_on_df(agg_df_finish_lag_overlap)
 round(as.matrix(agg_df_finish_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
 
-#### FINISH SOD LAG NEXT SESSION CATE AGGREGATE ANALYSIS ####
+#### FINISH SOP LAG NEXT SESSION CATE AGGREGATE ANALYSIS ####
 #' We now estimate the CATE, and use it to construct quartiles. We then report the ATE as estimated with AIPW from our causal forest estimate across quartiles. 
 #+ results='asis'
 cf <- forest_from_df(agg_df_finish_lag_overlap)
@@ -688,9 +668,15 @@ X <- as.matrix(freadom[, c(covariate_names), with=FALSE])
 # W <- as.matrix(freadom[, c("W_wordcount_high"), with=FALSE])
 # multi.forest <- multi_causal_forest(X = X, Y = Y, W = W)
 
-multi.forest <- forest_from_df(freadom, multi_causal_forest, "W_wordcount_high", "Y_utility")
+multi.forest <- forest_from_df(freadom, multi_causal_forest, "W_wordcount_qtile", "Y_wordsread")
 Gamma.matrix <- double_robust_scores(multi.forest)
 
-train <- sample(1:n, 200)
-opt.tree <- policy_tree(X[train, ], Gamma.matrix[train, ], depth = 2)
-opt.tree
+opt.tree <- policy_tree(X, Gamma.matrix, depth = 2)
+plot(opt.tree)
+
+X <- as.matrix(freadom_agg[, c(covariate_names), with=FALSE])
+multi.forest <- forest_from_df(freadom_agg, multi_causal_forest, "W_wordcount_qtile", "Y_wordsread")
+Gamma.matrix <- double_robust_scores(multi.forest)
+
+opt.tree <- policy_tree(X, Gamma.matrix, depth = 2)
+plot(opt.tree)
