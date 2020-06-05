@@ -477,7 +477,7 @@ df_finish_lag_overlap <- calculate_propensities(df_finish_lag)
 df_finish_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
   ggtitle("Predicted Probability of Completing SOP")
 
-df_wcount_qtile_wordsread_overlap <- calculate_propensities(df_wcount_qtile_wordsread_)
+df_wcount_qtile_wordsread_overlap <- calculate_propensities(df_wcount_qtile_wordsread)
 df_wcount_qtile_wordsread_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
   ggtitle("Assigned Word Count")
 
@@ -509,7 +509,7 @@ agg_df_finish_lag_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.fac
   ggtitle("Predicted Probability of Completing SOP, 
           Averaged Over Each User's Trips")
 
-agg_df_wcount_qtile_wordsread_overlap <- calculate_propensities(agg_df_wcount_qtile_wordsread_)
+agg_df_wcount_qtile_wordsread_overlap <- calculate_propensities(agg_df_wcount_qtile_wordsread)
 agg_df_wcount_qtile_wordsread_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
   ggtitle("Assigned Word Count, 
           Averaged Over Each User's Trips")
