@@ -579,7 +579,7 @@ df_finish_lag_overlap_qtile %>% stargazer(summary = FALSE, header = FALSE)
 #### READING TIME FINISH SOD AGGREGATE ANALYSIS ####
 #' \newpage
 #' # Rate at Which Users on Their Average Trip Finish Stories of the Day by Length {#finish_sod_by_length}
-#+ finish_sod_time_ate, results='asis'
+#+ finish_sod_time_ate_agg, results='asis'
 
 agg_df_time_finish_models <- run_all_models_on_df(agg_df_time_finish_overlap)
 round(as.matrix(agg_df_time_finish_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
@@ -587,7 +587,7 @@ round(as.matrix(agg_df_time_finish_models), 3) %>% stargazer(summary = FALSE, he
 #### WORD COUNT FINISH SOD AGGREGATE ANALYSIS ####
 #' \newpage
 #' # Rate at Which Users on Their Average Trip Finish Stories of the Day by Word Count {#finish_sod_by_wcount}
-#+ finish_sod_wcount_ate, results='asis'
+#+ finish_sod_wcount_ate_agg, results='asis'
 
 agg_df_wcount_finish_models <- run_all_models_on_df(agg_df_wcount_finish_overlap)
 round(as.matrix(agg_df_wcount_finish_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
@@ -597,7 +597,7 @@ round(as.matrix(agg_df_wcount_finish_models), 3) %>% stargazer(summary = FALSE, 
 #### READING TIME LAG SOD AGGREGATE ANALYSIS ####
 #' \newpage
 #' # Rate at Which Users on Their Average Trip Finish Stories of the Day by Length {#lag_sod_by_length}
-#+ lag_sod_time_ate, results='asis'
+#+ lag_sod_time_ate_agg, results='asis'
 
 agg_df_time_lag_models <- run_all_models_on_df(agg_df_time_lag_overlap)
 round(as.matrix(agg_df_time_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
@@ -605,7 +605,7 @@ round(as.matrix(agg_df_time_lag_models), 3) %>% stargazer(summary = FALSE, heade
 #### WORD COUNT LAG SOD AGGREGATE ANALYSIS ####
 #' \newpage
 #' # Rate at Which Users on Their Average Trip Finish Stories of the Day by Word Count {#lag_sod_by_wcount}
-#+ lag_sod_wcount_ate, results='asis'
+#+ lag_sod_wcount_ate_agg, results='asis'
 
 agg_df_wcount_lag_models <- run_all_models_on_df(agg_df_wcount_lag_overlap)
 round(as.matrix(agg_df_wcount_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
@@ -613,7 +613,7 @@ round(as.matrix(agg_df_wcount_lag_models), 3) %>% stargazer(summary = FALSE, hea
 
 #### FINISH SOD LAG NEXT SESSION AGGREGATE ANALYSIS ####
 #' # Effect of Finishing SOD on Time to Next Session {#finish_sod_lag}
-#+ finish_sod_lag_avg, results='asis'
+#+ finish_sod_lag_avg_agg, results='asis'
 agg_df_finish_lag_models <- run_all_models_on_df(agg_df_finish_lag_overlap)
 round(as.matrix(agg_df_finish_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
 
