@@ -10,6 +10,8 @@
 #'     df_print: paged
 #'     toc: true
 #'     toc_depth: 2
+#'     fontsize: 12pt
+#'     linestretch: 1.5
 #' ---
 #### SETUP ####
 #+ echo=FALSE
@@ -672,6 +674,7 @@ agg_df_finish_lag_overlap_qtile %>% stargazer(summary = FALSE, header = FALSE)
 
 
 #### POLICY TREE ####
+#' # Optimal Policy
 X <- as.matrix(freadom[, c(covariate_names), with=FALSE])
 # Y <- as.matrix(freadom[, c("Y_utility"), with=FALSE])
 # W <- as.matrix(freadom[, c("W_wordcount_high"), with=FALSE])
@@ -692,6 +695,7 @@ plot(opt.tree)
 
 
 #### WRITEUP ####
+#' \newpage
 #' # Introduction
 #' 
 #' Improvements to childhood literacy have been linked to numerous positive outcomes, including economic and social benefits (cite). In this paper, we use data from a mobile application, aimed at improving childhood reading outcomes. School going children from junior kindergarten until grade 3 use the app to read stories, among other things.
