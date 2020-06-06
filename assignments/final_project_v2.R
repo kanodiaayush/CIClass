@@ -339,7 +339,7 @@ run_all_models_on_df <- function(df_propensity, continuous_treatment = FALSE){
   tauhat_ols_rf_aipw = aipw_ols(df, df_propensity$p_W_rf)
   
   all_estimators = rbind(
-    RCT_gold_standard = tauhat_rct,
+    Difference_in_Means = tauhat_rct,
     # naive_observational = tauhat_confounded,
     # linear_regression = tauhat_ols,
     logistic_propensity_weighted_regression = tauhat_logistic_pscore_ols,
