@@ -557,10 +557,11 @@ round(as.matrix(df_wcount_lag_models), 3) %>% knitr::kable(format = "latex")
 df_wcount_lag_models <- run_all_models_on_df(df_wcount_lag_overlap)
 round(as.matrix(df_wcount_lag_models), 3) %>% knitr::kable(format = "latex")
 
-#' We now estimate the CATE, and use it to construct quartiles. We then report the ATE as estimated with AIPW from our causal forest estimate across quartiles. 
+
+
 #### WORD COUNT SOD LAG NEXT SESSION CATE ANALYSIS ####
 #' \newpage
-#' # Word Count CATE on Time to Next Session
+#' # Word Count CATE on Time to Next Session  
 #' We now estimate the CATE, and use it to construct quartiles of user-sessions. We then report the ATE as estimated with AIPW from our causal forest estimate across quartiles. 
 #+ results='asis'
 cf <- forest_from_df(df_wcount_lag_overlap)
