@@ -542,7 +542,7 @@ round(as.matrix(df_time_lag_models), 3) %>% knitr::kable(format = "latex")
 
 #### WORD COUNT LAG SOD ANALYSIS ####
 #' \newpage
-#' ## Effect of Higher than Average Word Count SOD on Time to Next Session {#lag_sod_by_length}
+#' ## Effect of Higher than Average Word Count SOD on Time to Next Session {#lag_sod_by_wcount}
 #+ lag_sod_wcount_ate, results='asis'
 
 df_wcount_lag_models <- run_all_models_on_df(df_wcount_lag_overlap)
@@ -551,14 +551,13 @@ round(as.matrix(df_wcount_lag_models), 3) %>% knitr::kable(format = "latex")
 
 #### WORD COUNT QUARTILE SOD WORDS READ ANALYSIS ####
 #' \newpage
-#' # Number of Words Read  {#lag_sod_by_wcount}
+#' # Number of Words Read  {#lag_sod_by_wcount_qtile}
 #+ lag_sod_wcount_ate_qtl, results='asis'
 
 df_wcount_lag_models <- run_all_models_on_df(df_wcount_lag_overlap)
 round(as.matrix(df_wcount_lag_models), 3) %>% knitr::kable(format = "latex")
 
 #' We now estimate the CATE, and use it to construct quartiles. We then report the ATE as estimated with AIPW from our causal forest estimate across quartiles. 
-=======
 #### WORD COUNT SOD LAG NEXT SESSION CATE ANALYSIS ####
 #' \newpage
 #' # Word Count CATE on Time to Next Session
@@ -567,11 +566,11 @@ round(as.matrix(df_wcount_lag_models), 3) %>% knitr::kable(format = "latex")
 cf <- forest_from_df(df_wcount_lag_overlap)
 
 oob_pred <- predict(cf, estimate.variance=TRUE)
-df_finish_lag_overlap$cate <- oob_pred$predictions
+df_wcount_lag_overlap$cate <- oob_pred$predictions
 
 # Manually creating subgroups
 num_tiles <- 4  # ntiles = CATE is above / below the median
-df_finish_lag_overlap$ntile <- factor(ntile(oob_pred$predictions, n=num_tiles))
+df_wcount_lag_overlap$ntile <- factor(ntile(oob_pred$predictions, n=num_tiles))
 
 
 # ATE estimates
@@ -624,7 +623,7 @@ round(as.matrix(agg_df_time_lag_models), 3) %>% knitr::kable(format = "latex")
 
 #### WORD COUNT LAG SOD AGGREGATE ANALYSIS ####
 #' \newpage
-#' ## User Average Effect of Higher than Average Word Count SOD on Time to Next Session {#lag_sod_by_length_agg}
+#' ## User Average Effect of Higher than Average Word Count SOD on Time to Next Session {#lag_sod_by_wcount_agg}
 #+ lag_sod_wcount_ate_agg, results='asis'
 
 agg_df_wcount_lag_models <- run_all_models_on_df(agg_df_wcount_lag_overlap)
