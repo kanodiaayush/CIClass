@@ -682,7 +682,7 @@ Gamma.matrix <- double_robust_scores(multi.forest)
 opt.tree <- policy_tree(X, Gamma.matrix, depth = 2)
 plot(opt.tree, tweak = treeplot_font_size_mult, title = "Total Words Read")
 
-#' ## Policy Tree for Effect of SOD Word Count Quartile on SOP Completion
+#' ## Policy Tree for Effect of SOD Word Count Quartile on SOD Completion
 multi.forest <- forest_from_df(freadom, multi_causal_forest, "W_wordcount_qtile", "Y_utility")
 Gamma.matrix <- double_robust_scores(multi.forest)
 
