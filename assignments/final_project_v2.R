@@ -724,20 +724,27 @@ plot(opt.tree, tweak = treeplot_font_size_mult)
 #' 
 #' # Data Description
 #' ## User Covariates:
-#' In our dataset, we have a bunch of covariates describing users. These include age, grade, statistics about usage such as books read, experience points gained on the app while using it, total time spent on the app, covariates about how well a child answered questions related to their readings, and their reading interests
-#' ## Treatment Definitions:
-#' We use the following treatments for analysis:
-#' ### Suggested Reading Time for a given story: The app includes suggested reading times for a story in one of five choices. We examine only stories where the estimated reading time was either 7.5 or 12.5 minutes, as estimated reading time is not continuous. These two values of estimated reading time account for 95% of all user-trips. 
-#' ### Number of words for a given story: We parsed the stories shown on the app to get the number of words in each story, and we use this as a treatment variable. We divide observations into those where the number of words is below and above the median, giving us a treatment and a control. We also do another analysis with multiple treatments where the treatment is characterised by the quantile in which its number of words falls; giving us 4 treatment conditions.  
+#' In our dataset, we have a bunch of covariates describing users. These include age, grade, statistics about usage such as books read, experience points gained on the app while using it, total time spent on the app, covariates about how well a child answered questions related to their readings, and their reading interests.  
+#' 
+#' ## Treatment Definitions  
+#' 
+#' We use the following treatments for analysis:  
+#' 
+#' * Suggested Reading Time for a given story: The app includes suggested reading times for a story in one of five choices. We examine only stories where the estimated reading time was either 7.5 or 12.5 minutes, as estimated reading time is not continuous. These two values of estimated reading time account for 95% of all user-trips.   
+#' * Number of words for a given story: We parsed the stories shown on the app to get the number of words in each story, and we use this as a treatment variable. We divide observations into those where the number of words is below and above the median, giving us a treatment and a control. We also do another analysis with multiple treatments where the treatment is characterised by the quantile in which its number of words falls; giving us 4 treatment conditions.  
+#' 
 #' We recall that as the assignment of the Story of the Day is at-random, so is the assignment of word count and estimated reading time. Note: We examine only users-trips where the user started reading the Story of the Day, as otherwise the user would have no estimate of the length or time required to read the story.
 #' 
-#' ## Outcomes
+#' ## Outcomes  
+#' 
 #' We examine three outcomes in our analysis: whether the user finished reading their assigned Story of the Day, the length of time until their next session, and the estimated number of words they read. In addition to conducting our analyses at the user-session level, we also estimate user-level aggregate treatment effects. For each user we aggregate over all sessions, averaging session-level binary treatment status and outcome. 
 #' 
 #' # Average Treatment Effect  
+#' 
 #' First, we measure the average treatment effect of our various treatments on our various outcomes. For this, as we learnt in the class, we use various methods.
 #' 
 #' ## Models  
+#' 
 #' For each set of models, we compare results from the following methods:  
 #' * Simple Difference in Means   
 #' * Logistic Propensity Weighted Linear Regression  
@@ -747,7 +754,9 @@ plot(opt.tree, tweak = treeplot_font_size_mult)
 #' * AIPW Estimator using Causal Forests for both outcome and propensity models  
 #' 
 #' ## Results for each Treatment  
+#' 
 #' ### Suggested Reading Time  
+#' 
 #' At the user-session level, estimated reading time has no significant effect on a user’s likelihood of completing their story of the day; confidence intervals include zero in almost all models in Table 1.1. 
 #' On the other hand, Table 4.1 shows the estimated reading time has a significant and negative effect on the probability of a user completing the SOD at the user level: when assigned readings that take longer, users are less likely to complete an average SOD. This is true and significant across all model specifications.   
 #'  
@@ -757,6 +766,7 @@ plot(opt.tree, tweak = treeplot_font_size_mult)
 #' At the user-level in Table 4.3, our causal forest model has confidence intervals that include zero, while all other models indicate a negative effect of higher average reading time on time until the next SOD attempt. Otherwise, the results are analogous to the effect on SOD completion, with AIPW estimators with Causal Forest Propensities giving the smallest Confidence Intervals.
 #' 
 #' ### Word Count  
+#' 
 #' At the user-session level in Table 1.2, we see that longer SOD by word-count had a slightly negative (but statistically significant) effect on finishing SOD. This is the case for the difference in means estimate of the treatment effect as well as all AIPW methods, which are generally more reliable than the (conflicting evidence presented by) the IPW methods. This matches our initial hypothesis.  
 #' In Table 1.4 we see some evidence for the effect of SOD word count on time until next login: while the causal forest confidence intervals include zero, all other AIPW models are significant and show that longer passages by word-length increases the average time until the next session.  
 #' 
@@ -771,15 +781,16 @@ plot(opt.tree, tweak = treeplot_font_size_mult)
 #' We first use causal forests to estimate the CATE, and use our CATE estimates to construct quartiles of user-sessions. We then report the ATE as estimated with AIPW from our causal forest estimate across quartiles. We find significant effects in the first and fourth quartiles in opposite directions: for those users in the bottom quartile of estimated CATE, we find that an increase in word count has a negative and statistically significant effect on time until next SOD attempt; for the highest quartile we observe a significant, positive relationship between these two quantities. If our goal is to increase total amount read, this indicates that we may be able to do so by targeting users with SODs of different length. 
 #' 
 #' 
-#' # Optimal Policy
+#' # Optimal Policy  
 #' 
 #' In this section, we divide story word counts into 4 quartiles, leading to 4 different treatments. We use multi treatment causal forests to estimate treatment effects for each of these. We consider two outcomes; SOD completion and Number of Words Read by a user. We calculate treatment effects for these outcomes at both the user level as well as the user session level. As we learnt in class, our goal is to learn optimal policy assignments for students in this section. Here, a policy would denote a decision to show a user a story of a certain length.
 #' 
-#' ## Model
+#' ## Model  
 #' 
 #' We use the Policy Tree model. This model does a greedy search over the covariate space, in the style of a regression forest, but exhausting all possible split points (with some approximation if desired). We show depth 2 policy trees learnt for policy allocation with this model.
 #' 
-#' ## Results
+#' ## Results  
+#' 
 #' We note that the Policy Tree model tells us that for users with more experience, we should adopt the policy of showing them stories which are longer to maximize their reading utilities (section 5.2); the second level split shows this. This is an interesting finding which shows that more experienced users mature over time and prefer to read lengthier stories.
 #' 
 #' For number of words read as outcome, the model tells us that we should prefer to show lengthier stories to all users (quantile 3 and 4 in section 5.1) in general
