@@ -368,7 +368,7 @@ run_all_models_on_df <- function(df_propensity, continuous_treatment = FALSE){
 }
 
 #### LOAD DATA ####
-
+#+ echo=TRUE
 # trip-level data 
 freadom <- fread(sprintf("%s/treatment_effects.csv", data_dir))
 
@@ -459,7 +459,7 @@ agg_df_wcount_qtile_wordsread %>% setnames_W_Y()
 
 #### ANALYSIS PER DATASET ####
 
-#+ propensity plots
+#+ propensity plots, echo=TRUE
 # Calculate and Plot Overlap
 df_time_finish_overlap <- calculate_propensities(df_time_finish)
 df_time_finish_overlap %>% ggplot(aes(x=p_W_rf,color=as.factor(W),fill=as.factor(W)))+ geom_histogram() + 
@@ -520,7 +520,7 @@ agg_df_wcount_qtile_wordsread_overlap <- agg_df_wcount_qtile_wordsread_overlap[p
 #### READING TIME FINISH SOD ANALYSIS ####
 #' \newpage
 #' ## Effect of Higher than Average Estimated Reading Time on SOD Completion {#finish_sod_by_length}
-#+ finish_sod_time_ate, results='asis'
+#+ finish_sod_time_ate, results='asis', echo=TRUE
 
 df_time_finish_models <- run_all_models_on_df(df_time_finish_overlap)
 round(as.matrix(df_time_finish_models), 3) %>% knitr::kable(format = "latex")
@@ -528,7 +528,7 @@ round(as.matrix(df_time_finish_models), 3) %>% knitr::kable(format = "latex")
 #### WORD COUNT FINISH SOD ANALYSIS ####
 #' \newpage
 #' ## Effect of Higher than Average Estimated Word Count on SOD Completion {#finish_sod_by_wcount}
-#+ finish_sod_wcount_ate, results='asis'
+#+ finish_sod_wcount_ate, results='asis', echo=TRUE
 
 df_wcount_finish_models <- run_all_models_on_df(df_wcount_finish_overlap)
 round(as.matrix(df_wcount_finish_models), 3) %>% knitr::kable(format = "latex")
@@ -538,7 +538,7 @@ round(as.matrix(df_wcount_finish_models), 3) %>% knitr::kable(format = "latex")
 #### READING TIME LAG SOD ANALYSIS ####
 #' \newpage
 #' ## Effect of Higher than Average Estimated Reading Time SOD on Time to Next Session {#lag_sod_by_length}
-#+ lag_sod_time_ate, results='asis'
+#+ lag_sod_time_ate, results='asis', echo=TRUE
 
 df_time_lag_models <- run_all_models_on_df(df_time_lag_overlap)
 round(as.matrix(df_time_lag_models), 3) %>% knitr::kable(format = "latex")
@@ -546,7 +546,7 @@ round(as.matrix(df_time_lag_models), 3) %>% knitr::kable(format = "latex")
 #### WORD COUNT LAG SOD ANALYSIS ####
 #' \newpage
 #' ## Effect of Higher than Average Word Count SOD on Time to Next Session {#lag_sod_by_wcount}
-#+ lag_sod_wcount_ate, results='asis'
+#+ lag_sod_wcount_ate, results='asis', echo=TRUE
 
 df_wcount_lag_models <- run_all_models_on_df(df_wcount_lag_overlap)
 round(as.matrix(df_wcount_lag_models), 3) %>% knitr::kable(format = "latex")
@@ -555,7 +555,7 @@ round(as.matrix(df_wcount_lag_models), 3) %>% knitr::kable(format = "latex")
 #### WORD COUNT QUARTILE SOD WORDS READ ANALYSIS ####
 #' \newpage
 #' # Number of Words Read  {#lag_sod_by_wcount_qtile}
-#+ lag_sod_wcount_ate_qtl, results='asis'
+#+ lag_sod_wcount_ate_qtl, results='asis', echo=TRUE
 
 df_wcount_lag_models <- run_all_models_on_df(df_wcount_lag_overlap)
 round(as.matrix(df_wcount_lag_models), 3) %>% knitr::kable(format = "latex")
@@ -566,7 +566,7 @@ round(as.matrix(df_wcount_lag_models), 3) %>% knitr::kable(format = "latex")
 #' \newpage
 #' # Word Count CATE on Time to Next Session  
 #' We now estimate the CATE, and use it to construct quartiles of user-sessions. We then report the ATE as estimated with AIPW from our causal forest estimate across quartiles. 
-#+ results='asis'
+#+ results='asis', echo=TRUE
 cf <- forest_from_df(df_wcount_lag_overlap)
 
 oob_pred <- predict(cf, estimate.variance=TRUE)
@@ -602,7 +602,7 @@ df_wcount_lag_overlap_qtile %>% knitr::kable(format = "latex")
 #### READING TIME FINISH SOD AGGREGATE ANALYSIS ####
 #' \newpage
 #' ## User Average Effect of Higher than Average Estimated Reading Time on SOD Completion {#finish_sod_by_length_agg}
-#+ finish_sod_time_ate_agg, results='asis'
+#+ finish_sod_time_ate_agg, results='asis', echo=TRUE
 
 agg_df_time_finish_models <- run_all_models_on_df(agg_df_time_finish_overlap)
 round(as.matrix(agg_df_time_finish_models), 3) %>% knitr::kable(format = "latex")
@@ -610,7 +610,7 @@ round(as.matrix(agg_df_time_finish_models), 3) %>% knitr::kable(format = "latex"
 #### WORD COUNT FINISH SOD AGGREGATE ANALYSIS ####
 #' \newpage
 #' ## User Average Effect of Higher than Average Estimated Word Count on SOD Completion {#finish_sod_by_wcount_agg}
-#+ finish_sod_wcount_ate_agg, results='asis'
+#+ finish_sod_wcount_ate_agg, results='asis', echo=TRUE
 
 agg_df_wcount_finish_models <- run_all_models_on_df(agg_df_wcount_finish_overlap)
 round(as.matrix(agg_df_wcount_finish_models), 3) %>% knitr::kable(format = "latex")
@@ -620,7 +620,7 @@ round(as.matrix(agg_df_wcount_finish_models), 3) %>% knitr::kable(format = "late
 #### READING TIME LAG SOD AGGREGATE ANALYSIS ####
 #' \newpage
 #' ## User Average Effect of Higher than Average Estimated Reading Time SOD on Time to Next Session {#lag_sod_by_length_agg}
-#+ lag_sod_time_ate_agg, results='asis'
+#+ lag_sod_time_ate_agg, results='asis', echo=TRUE
 
 agg_df_time_lag_models <- run_all_models_on_df(agg_df_time_lag_overlap)
 round(as.matrix(agg_df_time_lag_models), 3) %>% knitr::kable(format = "latex")
@@ -628,7 +628,7 @@ round(as.matrix(agg_df_time_lag_models), 3) %>% knitr::kable(format = "latex")
 #### WORD COUNT LAG SOD AGGREGATE ANALYSIS ####
 #' \newpage
 #' ## User Average Effect of Higher than Average Word Count SOD on Time to Next Session {#lag_sod_by_wcount_agg}
-#+ lag_sod_wcount_ate_agg, results='asis'
+#+ lag_sod_wcount_ate_agg, results='asis', echo=TRUE
 
 agg_df_wcount_lag_models <- run_all_models_on_df(agg_df_wcount_lag_overlap)
 round(as.matrix(agg_df_wcount_lag_models), 3) %>% knitr::kable(format = "latex")
@@ -636,7 +636,7 @@ round(as.matrix(agg_df_wcount_lag_models), 3) %>% knitr::kable(format = "latex")
 
 #### FINISH SOD LAG NEXT SESSION CATE AGGREGATE ANALYSIS ####
 #' We now estimate the CATE, and use it to construct quartiles. We then report the ATE as estimated with AIPW from our causal forest estimate across quartiles. 
-#+ results='asis'
+#+ results='asis', echo=TRUE
 cf <- forest_from_df(agg_df_wcount_lag_overlap)
 
 oob_pred <- predict(cf, estimate.variance=TRUE)
@@ -670,12 +670,13 @@ agg_df_wcount_lag_overlap_qtile %>% knitr::kable(format = "latex")
 
 #### POLICY TREE ####
 #' # Optimal Policy Trees
+#+ echo=TRUE
 X <- as.matrix(freadom[, c(covariate_names), with=FALSE])
 # Y <- as.matrix(freadom[, c("Y_utility"), with=FALSE])
 # W <- as.matrix(freadom[, c("W_wordcount_high"), with=FALSE])
 # multi.forest <- multi_causal_forest(X = X, Y = Y, W = W)
 #' ## Policy Tree for Effect of SOD Word Count Quartile on Words Read per Session
-#+
+#+ echo=TRUE
 multi.forest <- forest_from_df(freadom, multi_causal_forest, "W_wordcount_qtile", "Y_wordsread")
 Gamma.matrix <- double_robust_scores(multi.forest)
 
@@ -683,6 +684,7 @@ opt.tree <- policy_tree(X, Gamma.matrix, depth = 2)
 plot(opt.tree, tweak = treeplot_font_size_mult, title = "Total Words Read")
 
 #' ## Policy Tree for Effect of SOD Word Count Quartile on SOD Completion
+#+ echo=TRUE
 multi.forest <- forest_from_df(freadom, multi_causal_forest, "W_wordcount_qtile", "Y_utility")
 Gamma.matrix <- double_robust_scores(multi.forest)
 
@@ -690,6 +692,7 @@ opt.tree <- policy_tree(X, Gamma.matrix, depth = 2)
 plot(opt.tree, tweak = treeplot_font_size_mult, title = "Total Words Read")
 
 #' ## Policy Tree for User-Level Average Effect of SOD Word Count Quartile on Words Read per Session
+#+ echo=TRUE
 X <- as.matrix(freadom_agg[, c(covariate_names), with=FALSE])
 multi.forest <- forest_from_df(freadom_agg, multi_causal_forest, "W_wordcount_qtile", "Y_wordsread")
 Gamma.matrix <- double_robust_scores(multi.forest)
@@ -698,6 +701,7 @@ opt.tree <- policy_tree(X, Gamma.matrix, depth = 2)
 plot(opt.tree, tweak = treeplot_font_size_mult)
 
 #' ## Policy Tree for User-Level Average Effect of SOD Word Count Quartile on SOD Completion
+#+ echo=TRUE
 X <- as.matrix(freadom_agg[, c(covariate_names), with=FALSE])
 multi.forest <- forest_from_df(freadom_agg, multi_causal_forest, "W_wordcount_qtile", "Y_utility")
 Gamma.matrix <- double_robust_scores(multi.forest)
