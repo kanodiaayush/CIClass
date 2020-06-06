@@ -708,61 +708,86 @@ plot(opt.tree, tweak = treeplot_font_size_mult)
 
 #### WRITEUP ####
 #' \newpage
-#' # Introduction
+#' # Introduction  
 #' 
-#' Improvements to childhood literacy have been linked to numerous positive outcomes, including economic and social benefits (cite). In this paper, we use data from a mobile application, aimed at improving childhood reading outcomes. School going children from junior kindergarten until grade 3 use the app to read stories, among other things.
+#' Improvements to childhood literacy have been linked to numerous positive outcomes, including economic and social benefits. In this paper, we use data from a mobile application aimed at improving childhood reading outcomes. The app is primarily used by schoolgoing children from junior kindergarten until grade 3 to read and interact with stories.  
 #' 
-#' This work takes advantage of the application’s “Story of the Day” (hereafter SOD) feature. Stories of the Day are featured prominently on the app, and users read the Story of the Day on approximately 33% of days they use the app. Our analysis focuses entirely on these stories. Several Stories of the Day are available to be assigned to users on each day, and vary primarily by estimated reading time and word count. The assignment of story of the day is generic and not personalised, and different stories are shown everyday. As a result, if we consider a user opening the app as an exogenous random decision on a given day, since the stories shown to students are different each day, this gives us exogenous treatments for length of stories shown to students in terms of reading time and number of words in story. We measure the effect of this treatment on reading outcomes. Our identifying motivation is that longer stories reduce the probability of a child reading a story.
-#’
-#' Even if this effect is true on average, this does not mean that longer stories have negative effects on all users. As such, we examine CATEs across a variety of groups in Section \@ref(sod_length_cate).
+#' This work takes advantage of the application’s “Story of the Day” (hereafter SOD) feature. Stories of the Day are featured prominently on the app, and users read the SOD on approximately 33% of days they use the app. Our analysis focuses entirely on these stories. Several SODs are available to be assigned to users on each day, and vary primarily by estimated reading time and word count. The assignment of story of the day is generic and not personalised, and different stories are shown each day. As a result, if we consider a user opening the app as an exogenous random decision on a given day, since the stories shown to students are different each day, this gives us exogenous treatments for length of stories shown to students in terms of reading time and number of words in story. We measure the effect of this treatment on reading outcomes. Our identifying motivation is that longer stories reduce the probability of a child reading a story.  
 #' 
-#' Finally, in Section \@ref(optimal_policy) we attempt to maximize aggregate reading time by identifying the optimal policy, and summarize possible gains from targeted assignment of Stories of the Day by length.
+#' Even if this effect is true on average, this does not mean that longer stories have negative effects on all users. As such, we examine CATEs across a variety of groups in Section 5.
 #' 
-#' # Data Description  
-#' ## User Covariates:  
-#' In our dataset, we have a bunch of covariates describing users. These include age, grade, statistics about usage such as books read, experience points gained on the app while using it, total time spent on the app, covariates about how well a child answered questions related to their readings, and their reading interests.   
-#' ## Treatment Definitions:  
-#' We use the following treatments for analysis:  
+#' Finally, in Section 6 we attempt to maximize aggregate reading time by identifying the optimal policy, and summarize possible gains from targeted assignment of Stories of the Day by length.
+#' 
+#' # Data Description
+#' ## User Covariates:
+#' In our dataset, we have a bunch of covariates describing users. These include age, grade, statistics about usage such as books read, experience points gained on the app while using it, total time spent on the app, covariates about how well a child answered questions related to their readings, and their reading interests
+#' ## Treatment Definitions:
+#' We use the following treatments for analysis:
 #' ### Suggested Reading Time for a given story: The app includes suggested reading times for a story in one of five choices. We examine only stories where the estimated reading time was either 7.5 or 12.5 minutes, as estimated reading time is not continuous. These two values of estimated reading time account for 95% of all user-trips. 
 #' ### Number of words for a given story: We parsed the stories shown on the app to get the number of words in each story, and we use this as a treatment variable. We divide observations into those where the number of words is below and above the median, giving us a treatment and a control. We also do another analysis with multiple treatments where the treatment is characterised by the quantile in which its number of words falls; giving us 4 treatment conditions.  
-#' We recall that as the assignment of the Story of the Day is at-random, so is the assignment of word count and estimated reading time. 
-#' Note: We examine only users-trips where the user started reading the Story of the Day, as otherwise the user would have no estimate of the length or time required to read the story.  
+#' We recall that as the assignment of the Story of the Day is at-random, so is the assignment of word count and estimated reading time. Note: We examine only users-trips where the user started reading the Story of the Day, as otherwise the user would have no estimate of the length or time required to read the story.
 #' 
-#' ## Outcomes  
-#' We examine three outcomes in our analysis: whether the user finished reading their assigned Story of the Day, the length of time until their next session, and the estimated number of words they read.   
-#' 
-#' In addition to conducting our analyses at the user-session level, we also estimate user-level aggregate treatment effects. For each user we aggregate over all sessions, averaging session-level binary treatment status and outcome.  
+#' ## Outcomes
+#' We examine three outcomes in our analysis: whether the user finished reading their assigned Story of the Day, the length of time until their next session, and the estimated number of words they read. In addition to conducting our analyses at the user-session level, we also estimate user-level aggregate treatment effects. For each user we aggregate over all sessions, averaging session-level binary treatment status and outcome. 
 #' 
 #' # Average Treatment Effect  
-#' First, we measure the average treatment effect of our various treatments on our various outcomes. For this, as we learnt in the class, we use various methods.  
+#' First, we measure the average treatment effect of our various treatments on our various outcomes. For this, as we learnt in the class, we use various methods.
 #' 
 #' ## Models  
 #' For each set of models, we compare results from the following methods:  
-#' * Simple Difference in Means
-#' * Logistic Propensity Weighted Linear Regression,
-#' * IPW Estimator using Logistic Propensities
-#' * IPW Estimator using Regression Forest Propensities
-#' * AIPW Estimator using Logistic Propensities and Linear Regression
-#' * AIPW Estimator using Causal Forests for both outcome and propensity models
+#' * Simple Difference in Means   
+#' * Logistic Propensity Weighted Linear Regression  
+#' * IPW Estimator using Logistic Propensities  
+#' * IPW Estimator using Regression Forest Propensities  
+#' * AIPW Estimator using Logistic Propensities and Linear Regression  
+#' * AIPW Estimator using Causal Forests for both outcome and propensity models  
 #' 
 #' ## Results for each Treatment  
-#' 
 #' ### Suggested Reading Time  
-#' At the user-session level, estimated reading time has no significant effect on a user’s likelihood of completing their story of the day; confidence intervals include zero in almost all models in Table 1.   
+#' At the user-session level, estimated reading time has no significant effect on a user’s likelihood of completing their story of the day; confidence intervals include zero in almost all models in Table 1.1. 
+#' On the other hand, Table 4.1 shows the estimated reading time has a significant and negative effect on the probability of a user completing the SOD at the user level: when assigned readings that take longer, users are less likely to complete an average SOD. This is true and significant across all model specifications.   
+#'  
+#' We see that model results are similar with some variation in confidence intervals. The largest treatment effect in magnitude is reported by the IPW estimator with logistic propensities. The AIPW estimator with causal forests propensity model and a linear regression outcome model reports a more conservative treatment effect and also reports the minimum confidence interval length, while the difference in means estimator is a close second. However, we believe that the former is more reliable because it tries to control for confounding. We note that results across models are similar across treatments and outcomes. 
+#' At the user-session level in Table 1.3, we do not see significant effects on time until next SOD started under any model. 
 #' 
-#' On the other hand, estimated reading time has a significant and negative effect on the probability of a user completing the SOD at the user level: when assigned readings that take longer, users are less likely to complete an average SOD. This is true and significant across all model specifications.   
-#’
-#' We see that model results are similar with some variation in confidence intervals. The largest treatment effect in magnitude is reported by the IPW estimator with logistic propensities. The AIPW estimator with causal forests propensity model and a linear regression outcome model reports a more conservative treatment effect and also reports the minimum Confidence Interval length, while the difference in means estimator is a close second. However, we believe that the former is more reliable because it tries to control for confounding. We note that results across models are similar across treatments and outcomes.  
-#' 
-#' At the user-session level, we do not see significant effects on time until next SOD started under any model.   
-#' 
-#' At the user-level, our causal forest model has confidence intervals that include zero, while all other models indicate a negative effect of higher average reading time on time until the next SOD attempt. Otherwise, the results are analogous to the effect on SOD completion, with AIPW estimators with Causal Forest Propensities giving the smallest Confidence Intervals.  
+#' At the user-level in Table 4.3, our causal forest model has confidence intervals that include zero, while all other models indicate a negative effect of higher average reading time on time until the next SOD attempt. Otherwise, the results are analogous to the effect on SOD completion, with AIPW estimators with Causal Forest Propensities giving the smallest Confidence Intervals.
 #' 
 #' ### Word Count  
+#' At the user-session level in Table 1.2, we see that longer SOD by word-count had a slightly negative (but statistically significant) effect on finishing SOD. This is the case for the difference in means estimate of the treatment effect as well as all AIPW methods, which are generally more reliable than the (conflicting evidence presented by) the IPW methods. This matches our initial hypothesis.  
+#' In Table 1.4 we see some evidence for the effect of SOD word count on time until next login: while the causal forest confidence intervals include zero, all other AIPW models are significant and show that longer passages by word-length increases the average time until the next session.  
 #' 
-#' At the user-session level, longer SOD by word-count had a slightly negative (but statistically significant) effect on finishing SOD. This is the case for the difference in means estimate of the treatment effect as well as all AIPW methods, which are generally more reliable than the (conflicting evidence presented by) the IPW methods. This matches our initial hypothesis. 
+#' At the user-level in Table 4.2, users who were on average assigned longer readings by word count are generally less likely to finish their SOD. This is true of all AIPW methods other than the AIPW estimated with linear propensity scores. 
+#' Table 4.4 shows that there is conflicting evidence for the effect of longer word-count SODs on time until the next SOD view: the causal forest shows a significant and positive relationship between the two, while almost all other methods have confidence intervals that include zero. 
+#'  
+#' # Conditional Average Treatment Effect  
 #' 
-#' We see some evidence for the effect of SOD word count on time until next login: while the causal forest confidence intervals include zero, all other AIPW models are significant and show that longer passages by word-length increases the average time until the next session.  
+#' We now examine the CATE of word count on time until the next SOD attempt.  These results are detailed in Table 5.1. 
 #' 
-#' At the user-level, users who were on average assigned longer readings by word count are generally less likely to finish their SOD. This is true of all AIPW methods other than the AIPW estimated with linear propensity scores.  
-#' There is conflicting evidence for the effect of longer word-count SODs on time until the next SOD view: the causal forest shows a significant and positive relationship between the two, while almost all other methods have confidence intervals that include zero. 
+#' We experimented with a number of models for estimating CATEs, but only present those CATE estimates which were done using causal forests. 
+#' We first use causal forests to estimate the CATE, and use our CATE estimates to construct quartiles of user-sessions. We then report the ATE as estimated with AIPW from our causal forest estimate across quartiles. We find significant effects in the first and fourth quartiles in opposite directions: for those users in the bottom quartile of estimated CATE, we find that an increase in word count has a negative and statistically significant effect on time until next SOD attempt; for the highest quartile we observe a significant, positive relationship between these two quantities. If our goal is to increase total amount read, this indicates that we may be able to do so by targeting users with SODs of different length. 
+#' 
+#' 
+#' # Optimal Policy
+#' 
+#' In this section, we divide story word counts into 4 quartiles, leading to 4 different treatments. We use multi treatment causal forests to estimate treatment effects for each of these. We consider two outcomes; SOD completion and Number of Words Read by a user. We calculate treatment effects for these outcomes at both the user level as well as the user session level. As we learnt in class, our goal is to learn optimal policy assignments for students in this section. Here, a policy would denote a decision to show a user a story of a certain length.
+#' 
+#' ## Model
+#' 
+#' We use the Policy Tree model. This model does a greedy search over the covariate space, in the style of a regression forest, but exhausting all possible split points (with some approximation if desired). We show depth 2 policy trees learnt for policy allocation with this model.
+#' 
+#' ## Results
+#' We note that the Policy Tree model tells us that for users with more experience, we should adopt the policy of showing them stories which are longer to maximize their reading utilities (section 5.2); the second level split shows this. This is an interesting finding which shows that more experienced users mature over time and prefer to read lengthier stories.
+#' 
+#' For number of words read as outcome, the model tells us that we should prefer to show lengthier stories to all users (quantile 3 and 4 in section 5.1) in general
+#' 
+#' The results at the user level are more mixed. As in section 5.3, the model suggests showing longer stories to users with higher qa accuracy to increase number of words read.
+#' Probably the most interesting plot is in section 5.4. Here, we note that the policy prescribed for students with less than 55 questions is quartile 3 for students with lower qa accuracy, and quartile 4 for the rest. However, for students who have answered an unusually high number of questions, the policy prescribed is to show shorter utility stories to maximize SOD completion. We hypothesize that this is possible because this class represents unusually enthusiastic students who wish to maximize number of stories read/questions completed, and the easiest way for them to do this is to read shorter stories. This suggests corrective plans for such strategies which may not be pedagogically the most beneficial.
+#' 
+#' # Conclusion  
+#' 
+#' In this paper, we analyzed the impact of exposing children to stories of varied lengths, and testing effects of this treatment on various reading outcomes. We note that there is, as we hypothesized, an increased completion of stories when the length of the stories is shorter. This is not true, however, in bringing back users to the app more often. At the same time, we also find that this increase is not true ubiquitously for all users. As we see with the CATE estimates, there are subpopulations for whom the treatment effect may work in the opposite direction. 
+#' Further, as the Policy Tree analysis shows, we may want to particularly target different subpopulations in different ways; to some beginners we want to show stories which are shorter, so that they complete these easier stories and ride their wave of accomplishment to read more of these. For more advanced users, it is more beneficial to expose them to longer, more complex reads, to maximize reading.
+#' We utilized multiple methods for ATE, CATE and Optimal Policy Estimation, which we will return to in future work.  
+
+
+
