@@ -708,7 +708,7 @@ plot(opt.tree, tweak = treeplot_font_size_mult)
 
 #### WRITEUP ####
 #' \newpage
-#' # Introduction  
+#' # Writeup Introduction  
 #' 
 #' Improvements to childhood literacy have been linked to numerous positive outcomes, including economic and social benefits. In this paper, we use data from a mobile application aimed at improving childhood reading outcomes. The app is primarily used by schoolgoing children from junior kindergarten until grade 3 to read and interact with stories.  
 #' 
