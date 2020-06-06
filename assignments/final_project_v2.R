@@ -513,9 +513,10 @@ agg_df_finish_lag_overlap <- agg_df_finish_lag_overlap[p_W_rf %between% propensi
 agg_df_wcount_qtile_wordsread_overlap <- agg_df_wcount_qtile_wordsread_overlap[p_W_rf %between% propensity_bound & p_W %between% propensity_bound]
 
 
+#' # User-Session Level Analysis
 #### READING TIME FINISH SOD ANALYSIS ####
 #' \newpage
-#' # Rate at Which Users Finish Stories of the Day by Length {#finish_sod_by_length}
+#' ## Effect of Higher than Average Estimated Reading Time on SOD Completion {#finish_sod_by_length}
 #+ finish_sod_time_ate, results='asis'
 
 df_time_finish_models <- run_all_models_on_df(df_time_finish_overlap)
@@ -523,7 +524,7 @@ round(as.matrix(df_time_finish_models), 3) %>% knitr::kable(format = "latex")
 
 #### WORD COUNT FINISH SOD ANALYSIS ####
 #' \newpage
-#' # Rate at Which Users Finish Stories of the Day by Word Count {#finish_sod_by_wcount}
+#' ## Effect of Higher than Average Estimated Word Count on SOD Completion {#finish_sod_by_wcount}
 #+ finish_sod_wcount_ate, results='asis'
 
 df_wcount_finish_models <- run_all_models_on_df(df_wcount_finish_overlap)
@@ -533,7 +534,7 @@ round(as.matrix(df_wcount_finish_models), 3) %>% knitr::kable(format = "latex")
 
 #### READING TIME LAG SOD ANALYSIS ####
 #' \newpage
-#' # Rate at Which Users Finish Stories of the Day by Length {#lag_sod_by_length}
+#' ## Effect of Higher than Average Estimated Reading Time SOD on Time to Next Session {#lag_sod_by_length}
 #+ lag_sod_time_ate, results='asis'
 
 df_time_lag_models <- run_all_models_on_df(df_time_lag_overlap)
@@ -541,7 +542,7 @@ round(as.matrix(df_time_lag_models), 3) %>% knitr::kable(format = "latex")
 
 #### WORD COUNT LAG SOD ANALYSIS ####
 #' \newpage
-#' # Rate at Which Users Finish Stories of the Day by Word Count {#lag_sod_by_wcount}
+#' ## Effect of Higher than Average Word Count SOD on Time to Next Session {#lag_sod_by_length}
 #+ lag_sod_wcount_ate, results='asis'
 
 df_wcount_lag_models <- run_all_models_on_df(df_wcount_lag_overlap)
@@ -556,17 +557,14 @@ round(as.matrix(df_wcount_lag_models), 3) %>% knitr::kable(format = "latex")
 df_wcount_lag_models <- run_all_models_on_df(df_wcount_lag_overlap)
 round(as.matrix(df_wcount_lag_models), 3) %>% knitr::kable(format = "latex")
 
-
-#### FINISH SOD LAG NEXT SESSION ANALYSIS ####
-#' # Effect of Finishing SOD on Time to Next Session {#finish_sod_lag}
-#+ finish_sod_lag_avg, results='asis'
-df_finish_lag_models <- run_all_models_on_df(df_finish_lag_overlap)
-round(as.matrix(df_finish_lag_models), 3) %>% knitr::kable(format = "latex")
-
-#### FINISH SOD LAG NEXT SESSION CATE ANALYSIS ####
 #' We now estimate the CATE, and use it to construct quartiles. We then report the ATE as estimated with AIPW from our causal forest estimate across quartiles. 
+=======
+#### WORD COUNT SOD LAG NEXT SESSION CATE ANALYSIS ####
+#' \newpage
+#' # Word Count CATE on Time to Next Session
+#' We now estimate the CATE, and use it to construct quartiles of user-sessions. We then report the ATE as estimated with AIPW from our causal forest estimate across quartiles. 
 #+ results='asis'
-cf <- forest_from_df(df_finish_lag_overlap)
+cf <- forest_from_df(df_wcount_lag_overlap)
 
 oob_pred <- predict(cf, estimate.variance=TRUE)
 df_finish_lag_overlap$cate <- oob_pred$predictions
@@ -577,30 +575,30 @@ df_finish_lag_overlap$ntile <- factor(ntile(oob_pred$predictions, n=num_tiles))
 
 
 # ATE estimates
-df_finish_lag_overlap_qtile <- df_finish_lag_overlap[,.(
+df_wcount_lag_overlap_qtile <- df_wcount_lag_overlap[,.(
   avg_cf_cate = mean(cate)
 ),.(ntile)][order(ntile)]
 
-df_finish_lag_overlap_qtile
+df_wcount_lag_overlap_qtile
 
 estimated_aipw_ate <- lapply(
   seq(num_tiles), function(w) {
-    ate <- average_treatment_effect(cf, subset = df_finish_lag_overlap$ntile == w)
+    ate <- average_treatment_effect(cf, subset = df_wcount_lag_overlap$ntile == w)
   })
 estimated_aipw_ate <- data.frame(do.call(rbind, estimated_aipw_ate))
 estimated_aipw_ate$ntile <- factor(seq(num_tiles))
 setDT(estimated_aipw_ate)
 setnames(estimated_aipw_ate, c("aipw_estimate", "aipw_std.err", "ntile"))
 # join CATE estimates together
-df_finish_lag_overlap_qtile <- df_finish_lag_overlap_qtile[estimated_aipw_ate, on = .(ntile)]
-df_finish_lag_overlap_qtile %>% knitr::kable(format = "latex")
+df_wcount_lag_overlap_qtile <- df_wcount_lag_overlap_qtile[estimated_aipw_ate, on = .(ntile)]
+df_wcount_lag_overlap_qtile %>% knitr::kable(format = "latex")
 
 
-
+#' # User-level Analysis (Averaged over User-Sessions)
 
 #### READING TIME FINISH SOD AGGREGATE ANALYSIS ####
 #' \newpage
-#' # Rate at Which Users on Their Average Trip Finish Stories of the Day by Length {#finish_sod_by_length}
+#' ## User Average Effect of Higher than Average Estimated Reading Time on SOD Completion {#finish_sod_by_length_agg}
 #+ finish_sod_time_ate_agg, results='asis'
 
 agg_df_time_finish_models <- run_all_models_on_df(agg_df_time_finish_overlap)
@@ -608,7 +606,7 @@ round(as.matrix(agg_df_time_finish_models), 3) %>% knitr::kable(format = "latex"
 
 #### WORD COUNT FINISH SOD AGGREGATE ANALYSIS ####
 #' \newpage
-#' # Rate at Which Users on Their Average Trip Finish Stories of the Day by Word Count {#finish_sod_by_wcount}
+#' ## User Average Effect of Higher than Average Estimated Word Count on SOD Completion {#finish_sod_by_wcount_agg}
 #+ finish_sod_wcount_ate_agg, results='asis'
 
 agg_df_wcount_finish_models <- run_all_models_on_df(agg_df_wcount_finish_overlap)
@@ -618,7 +616,7 @@ round(as.matrix(agg_df_wcount_finish_models), 3) %>% knitr::kable(format = "late
 
 #### READING TIME LAG SOD AGGREGATE ANALYSIS ####
 #' \newpage
-#' # Rate at Which Users on Their Average Trip Finish Stories of the Day by Length {#lag_sod_by_length}
+#' ## User Average Effect of Higher than Average Estimated Reading Time SOD on Time to Next Session {#lag_sod_by_length_agg}
 #+ lag_sod_time_ate_agg, results='asis'
 
 agg_df_time_lag_models <- run_all_models_on_df(agg_df_time_lag_overlap)
@@ -626,55 +624,49 @@ round(as.matrix(agg_df_time_lag_models), 3) %>% knitr::kable(format = "latex")
 
 #### WORD COUNT LAG SOD AGGREGATE ANALYSIS ####
 #' \newpage
-#' # Rate at Which Users on Their Average Trip Finish Stories of the Day by Word Count {#lag_sod_by_wcount}
+#' ## User Average Effect of Higher than Average Word Count SOD on Time to Next Session {#lag_sod_by_length_agg}
 #+ lag_sod_wcount_ate_agg, results='asis'
 
 agg_df_wcount_lag_models <- run_all_models_on_df(agg_df_wcount_lag_overlap)
 round(as.matrix(agg_df_wcount_lag_models), 3) %>% knitr::kable(format = "latex")
 
 
-#### FINISH SOD LAG NEXT SESSION AGGREGATE ANALYSIS ####
-#' # Effect of Finishing SOD on Time to Next Session {#finish_sod_lag}
-#+ finish_sod_lag_avg_agg, results='asis'
-agg_df_finish_lag_models <- run_all_models_on_df(agg_df_finish_lag_overlap)
-round(as.matrix(agg_df_finish_lag_models), 3) %>% knitr::kable(format = "latex")
-
 #### FINISH SOD LAG NEXT SESSION CATE AGGREGATE ANALYSIS ####
 #' We now estimate the CATE, and use it to construct quartiles. We then report the ATE as estimated with AIPW from our causal forest estimate across quartiles. 
 #+ results='asis'
-cf <- forest_from_df(agg_df_finish_lag_overlap)
+cf <- forest_from_df(agg_df_wcount_lag_overlap)
 
 oob_pred <- predict(cf, estimate.variance=TRUE)
-agg_df_finish_lag_overlap$cate <- oob_pred$predictions
+agg_df_wcount_lag_overlap$cate <- oob_pred$predictions
 
 # Manually creating subgroups
 num_tiles <- 4  # ntiles = CATE is above / below the median
-agg_df_finish_lag_overlap$ntile <- factor(ntile(oob_pred$predictions, n=num_tiles))
+agg_df_wcount_lag_overlap$ntile <- factor(ntile(oob_pred$predictions, n=num_tiles))
 
 
 # ATE estimates
-agg_df_finish_lag_overlap_qtile <- agg_df_finish_lag_overlap[,.(
+agg_df_wcount_lag_overlap_qtile <- agg_df_wcount_lag_overlap[,.(
   avg_cf_cate = mean(cate)
 ),.(ntile)][order(ntile)]
 
-agg_df_finish_lag_overlap_qtile
+agg_df_wcount_lag_overlap_qtile
 
 estimated_aipw_ate <- lapply(
   seq(num_tiles), function(w) {
-    ate <- average_treatment_effect(cf, subset = agg_df_finish_lag_overlap$ntile == w)
+    ate <- average_treatment_effect(cf, subset = agg_df_wcount_lag_overlap$ntile == w)
   })
 estimated_aipw_ate <- data.frame(do.call(rbind, estimated_aipw_ate))
 estimated_aipw_ate$ntile <- factor(seq(num_tiles))
 setDT(estimated_aipw_ate)
 setnames(estimated_aipw_ate, c("aipw_estimate", "aipw_std.err", "ntile"))
 # join CATE estimates together
-agg_df_finish_lag_overlap_qtile <- agg_df_finish_lag_overlap_qtile[estimated_aipw_ate, on = .(ntile)]
-agg_df_finish_lag_overlap_qtile %>% knitr::kable(format = "latex")
+agg_df_wcount_lag_overlap_qtile <- agg_df_wcount_lag_overlap_qtile[estimated_aipw_ate, on = .(ntile)]
+agg_df_wcount_lag_overlap_qtile %>% knitr::kable(format = "latex")
 
 
 
 #### POLICY TREE ####
-#' # Optimal Policy
+#' # Optimal Policy Trees
 X <- as.matrix(freadom[, c(covariate_names), with=FALSE])
 # Y <- as.matrix(freadom[, c("Y_utility"), with=FALSE])
 # W <- as.matrix(freadom[, c("W_wordcount_high"), with=FALSE])
