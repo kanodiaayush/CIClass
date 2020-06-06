@@ -37,6 +37,9 @@ prop_drop_rf <- c(0.01, 0.02, 0.04, 0.1, 0.2, 0.3, 0.4, .5, .7, .8, .9)
 
 propensity_bound <- c(0.01, 0.99)
 
+# multiplier of treeplot font size
+treeplot_font_size_mult <- 0.8
+
 #### PACKAGES ####
 library(here)
 # devtools::install_github("hrbrmstr/hrbrthemes")
@@ -671,19 +674,36 @@ X <- as.matrix(freadom[, c(covariate_names), with=FALSE])
 # Y <- as.matrix(freadom[, c("Y_utility"), with=FALSE])
 # W <- as.matrix(freadom[, c("W_wordcount_high"), with=FALSE])
 # multi.forest <- multi_causal_forest(X = X, Y = Y, W = W)
-
+#' ## Policy Tree for Effect of SOD Word Count Quartile on Words Read per Session
+#+
 multi.forest <- forest_from_df(freadom, multi_causal_forest, "W_wordcount_qtile", "Y_wordsread")
 Gamma.matrix <- double_robust_scores(multi.forest)
 
 opt.tree <- policy_tree(X, Gamma.matrix, depth = 2)
-plot(opt.tree)
+plot(opt.tree, tweak = treeplot_font_size_mult, title = "Total Words Read")
 
+#' ## Policy Tree for Effect of SOD Word Count Quartile on SOP Completion
+multi.forest <- forest_from_df(freadom, multi_causal_forest, "W_wordcount_qtile", "Y_utility")
+Gamma.matrix <- double_robust_scores(multi.forest)
+
+opt.tree <- policy_tree(X, Gamma.matrix, depth = 2)
+plot(opt.tree, tweak = treeplot_font_size_mult, title = "Total Words Read")
+
+#' ## Policy Tree for User-Level Average Effect of SOD Word Count Quartile on Words Read per Session
 X <- as.matrix(freadom_agg[, c(covariate_names), with=FALSE])
 multi.forest <- forest_from_df(freadom_agg, multi_causal_forest, "W_wordcount_qtile", "Y_wordsread")
 Gamma.matrix <- double_robust_scores(multi.forest)
 
 opt.tree <- policy_tree(X, Gamma.matrix, depth = 2)
-plot(opt.tree)
+plot(opt.tree, tweak = treeplot_font_size_mult)
+
+#' ## Policy Tree for User-Level Average Effect of SOD Word Count Quartile on SOD Completion
+X <- as.matrix(freadom_agg[, c(covariate_names), with=FALSE])
+multi.forest <- forest_from_df(freadom_agg, multi_causal_forest, "W_wordcount_qtile", "Y_utility")
+Gamma.matrix <- double_robust_scores(multi.forest)
+
+opt.tree <- policy_tree(X, Gamma.matrix, depth = 2)
+plot(opt.tree, tweak = treeplot_font_size_mult)
 
 
 #### WRITEUP ####
