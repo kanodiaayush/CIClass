@@ -361,7 +361,7 @@ run_all_models_on_df <- function(df_propensity, continuous_treatment = FALSE){
   all_estimators = data.frame(all_estimators)
   all_estimators$ci_length = all_estimators$upper_ci - all_estimators$lower_ci
   all_estimators
-  # round(as.matrix(all_estimators), 3) %>% stargazer(summary = FALSE, header = FALSE)
+  # round(as.matrix(all_estimators), 3) %>% knitr::kable(format = "latex")
 }
 
 #### LOAD DATA ####
@@ -539,7 +539,7 @@ agg_df_wcount_qtile_wordsread_overlap <- agg_df_wcount_qtile_wordsread_overlap[p
 #+ finish_sod_time_ate, results='asis'
 
 df_time_finish_models <- run_all_models_on_df(df_time_finish_overlap)
-round(as.matrix(df_time_finish_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
+round(as.matrix(df_time_finish_models), 3) %>% knitr::kable(format = "latex")
 
 #### WORD COUNT FINISH SOD ANALYSIS ####
 #' \newpage
@@ -547,7 +547,7 @@ round(as.matrix(df_time_finish_models), 3) %>% stargazer(summary = FALSE, header
 #+ finish_sod_wcount_ate, results='asis'
 
 df_wcount_finish_models <- run_all_models_on_df(df_wcount_finish_overlap)
-round(as.matrix(df_wcount_finish_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
+round(as.matrix(df_wcount_finish_models), 3) %>% knitr::kable(format = "latex")
 
 
 
@@ -557,7 +557,7 @@ round(as.matrix(df_wcount_finish_models), 3) %>% stargazer(summary = FALSE, head
 #+ lag_sod_time_ate, results='asis'
 
 df_time_lag_models <- run_all_models_on_df(df_time_lag_overlap)
-round(as.matrix(df_time_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
+round(as.matrix(df_time_lag_models), 3) %>% knitr::kable(format = "latex")
 
 #### WORD COUNT LAG SOD ANALYSIS ####
 #' \newpage
@@ -565,7 +565,7 @@ round(as.matrix(df_time_lag_models), 3) %>% stargazer(summary = FALSE, header = 
 #+ lag_sod_wcount_ate, results='asis'
 
 df_wcount_lag_models <- run_all_models_on_df(df_wcount_lag_overlap)
-round(as.matrix(df_wcount_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
+round(as.matrix(df_wcount_lag_models), 3) %>% knitr::kable(format = "latex")
 
 
 #### WORD COUNT QUARTILE SOD WORDS READ ANALYSIS ####
@@ -574,14 +574,14 @@ round(as.matrix(df_wcount_lag_models), 3) %>% stargazer(summary = FALSE, header 
 #+ lag_sod_wcount_ate_qtl, results='asis'
 
 df_wcount_lag_models <- run_all_models_on_df(df_wcount_lag_overlap)
-round(as.matrix(df_wcount_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
+round(as.matrix(df_wcount_lag_models), 3) %>% knitr::kable(format = "latex")
 
 
 #### FINISH SOD LAG NEXT SESSION ANALYSIS ####
 #' # Effect of Finishing SOD on Time to Next Session {#finish_sod_lag}
 #+ finish_sod_lag_avg, results='asis'
 df_finish_lag_models <- run_all_models_on_df(df_finish_lag_overlap)
-round(as.matrix(df_finish_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
+round(as.matrix(df_finish_lag_models), 3) %>% knitr::kable(format = "latex")
 
 #### FINISH SOD LAG NEXT SESSION CATE ANALYSIS ####
 #' We now estimate the CATE, and use it to construct quartiles. We then report the ATE as estimated with AIPW from our causal forest estimate across quartiles. 
@@ -613,7 +613,7 @@ setDT(estimated_aipw_ate)
 setnames(estimated_aipw_ate, c("aipw_estimate", "aipw_std.err", "ntile"))
 # join CATE estimates together
 df_finish_lag_overlap_qtile <- df_finish_lag_overlap_qtile[estimated_aipw_ate, on = .(ntile)]
-df_finish_lag_overlap_qtile %>% stargazer(summary = FALSE, header = FALSE)
+df_finish_lag_overlap_qtile %>% knitr::kable(format = "latex")
 
 
 
@@ -624,7 +624,7 @@ df_finish_lag_overlap_qtile %>% stargazer(summary = FALSE, header = FALSE)
 #+ finish_sod_time_ate_agg, results='asis'
 
 agg_df_time_finish_models <- run_all_models_on_df(agg_df_time_finish_overlap)
-round(as.matrix(agg_df_time_finish_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
+round(as.matrix(agg_df_time_finish_models), 3) %>% knitr::kable(format = "latex")
 
 #### WORD COUNT FINISH SOD AGGREGATE ANALYSIS ####
 #' \newpage
@@ -632,7 +632,7 @@ round(as.matrix(agg_df_time_finish_models), 3) %>% stargazer(summary = FALSE, he
 #+ finish_sod_wcount_ate_agg, results='asis'
 
 agg_df_wcount_finish_models <- run_all_models_on_df(agg_df_wcount_finish_overlap)
-round(as.matrix(agg_df_wcount_finish_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
+round(as.matrix(agg_df_wcount_finish_models), 3) %>% knitr::kable(format = "latex")
 
 
 
@@ -642,7 +642,7 @@ round(as.matrix(agg_df_wcount_finish_models), 3) %>% stargazer(summary = FALSE, 
 #+ lag_sod_time_ate_agg, results='asis'
 
 agg_df_time_lag_models <- run_all_models_on_df(agg_df_time_lag_overlap)
-round(as.matrix(agg_df_time_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
+round(as.matrix(agg_df_time_lag_models), 3) %>% knitr::kable(format = "latex")
 
 #### WORD COUNT LAG SOD AGGREGATE ANALYSIS ####
 #' \newpage
@@ -650,14 +650,14 @@ round(as.matrix(agg_df_time_lag_models), 3) %>% stargazer(summary = FALSE, heade
 #+ lag_sod_wcount_ate_agg, results='asis'
 
 agg_df_wcount_lag_models <- run_all_models_on_df(agg_df_wcount_lag_overlap)
-round(as.matrix(agg_df_wcount_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
+round(as.matrix(agg_df_wcount_lag_models), 3) %>% knitr::kable(format = "latex")
 
 
 #### FINISH SOD LAG NEXT SESSION AGGREGATE ANALYSIS ####
 #' # Effect of Finishing SOD on Time to Next Session {#finish_sod_lag}
 #+ finish_sod_lag_avg_agg, results='asis'
 agg_df_finish_lag_models <- run_all_models_on_df(agg_df_finish_lag_overlap)
-round(as.matrix(agg_df_finish_lag_models), 3) %>% stargazer(summary = FALSE, header = FALSE)
+round(as.matrix(agg_df_finish_lag_models), 3) %>% knitr::kable(format = "latex")
 
 #### FINISH SOD LAG NEXT SESSION CATE AGGREGATE ANALYSIS ####
 #' We now estimate the CATE, and use it to construct quartiles. We then report the ATE as estimated with AIPW from our causal forest estimate across quartiles. 
@@ -689,7 +689,7 @@ setDT(estimated_aipw_ate)
 setnames(estimated_aipw_ate, c("aipw_estimate", "aipw_std.err", "ntile"))
 # join CATE estimates together
 agg_df_finish_lag_overlap_qtile <- agg_df_finish_lag_overlap_qtile[estimated_aipw_ate, on = .(ntile)]
-agg_df_finish_lag_overlap_qtile %>% stargazer(summary = FALSE, header = FALSE)
+agg_df_finish_lag_overlap_qtile %>% knitr::kable(format = "latex")
 
 
 
